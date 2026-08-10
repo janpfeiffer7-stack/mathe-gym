@@ -1,0 +1,308 @@
+/* Mathe Gym – Komponenten */
+
+/* ---------- Themenkarten ---------- */
+.themen-gitter { display: grid; gap: var(--a3); grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.thema {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  background: var(--flaeche); border: 1px solid var(--linie);
+  border-radius: var(--radius); padding: var(--a4);
+  box-shadow: var(--schatten); font: inherit; color: inherit;
+  transition: border-color .15s, box-shadow .15s;
+}
+.thema:hover { border-color: var(--blau-linie); box-shadow: var(--schatten-hoch); }
+.thema .kopfzeile { display: flex; gap: var(--a3); align-items: center; margin-bottom: var(--a2); }
+.thema .titel { font-weight: 700; }
+.thema .nummer { font-size: .75rem; color: var(--text-leise); font-weight: 600; }
+.thema .beschreibung { font-size: .9rem; color: var(--text-leise); margin-bottom: var(--a3); }
+.thema .fuss { display: flex; align-items: center; gap: var(--a2); }
+
+.symbol {
+  width: 40px; height: 40px; flex: none; border-radius: 11px;
+  background: var(--stufe-hell); color: var(--stufe);
+  display: grid; place-items: center;
+}
+.symbol svg { width: 22px; height: 22px; }
+
+/* ---------- Fortschrittsbalken ---------- */
+.balken { flex: 1 1 60px; height: 8px; border-radius: var(--radius-rund); background: var(--flaeche-2); overflow: hidden; }
+.balken > span { display: block; height: 100%; background: var(--stufe); border-radius: inherit; }
+.balken.fertig > span { background: var(--gut); }
+.balken-text { font-size: .75rem; color: var(--text-leise); font-weight: 700; white-space: nowrap; }
+
+/* ---------- Modus-Kacheln ---------- */
+.modi { display: grid; gap: var(--a3); grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+.modus {
+  display: flex; flex-direction: column; gap: var(--a1); text-align: left; cursor: pointer;
+  min-height: 96px; padding: var(--a4);
+  background: var(--flaeche); border: 1px solid var(--linie); border-radius: var(--radius);
+  font: inherit; color: inherit; box-shadow: var(--schatten);
+  transition: border-color .15s;
+}
+.modus:hover { border-color: var(--blau-linie); }
+.modus .name { font-weight: 700; }
+.modus .zusatz { font-size: .85rem; color: var(--text-leise); }
+.modus .symbol { margin-bottom: var(--a1); background: var(--blau-hell); color: var(--blau); }
+
+/* ---------- Kennzahlen ---------- */
+.kennzahlen { display: flex; flex-wrap: wrap; gap: var(--a3); }
+.kennzahl {
+  flex: 1 1 130px; background: var(--flaeche); border: 1px solid var(--linie);
+  border-radius: var(--radius-klein); padding: var(--a3) var(--a4);
+}
+.kennzahl .wert { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.kennzahl .bezeichnung { font-size: .8rem; color: var(--text-leise); }
+
+/* ---------- Trainingskopf ---------- */
+.training-kopf { display: flex; align-items: center; gap: var(--a3); margin-bottom: var(--a4); flex-wrap: wrap; }
+.training-kopf .titel { font-weight: 800; font-size: 1.1rem; }
+.training-kopf .meta { font-size: .85rem; color: var(--text-leise); }
+.training-fortschritt { display: flex; align-items: center; gap: var(--a3); margin-bottom: var(--a4); }
+
+/* ---------- Aufgabenkarte ---------- */
+.aufgabe { background: var(--flaeche); border: 1px solid var(--linie); border-radius: var(--radius);
+           box-shadow: var(--schatten); padding: var(--a5); }
+.aufgabe .lernziel {
+  font-size: .75rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--stufe); margin-bottom: var(--a2);
+}
+.aufgabe .frage { font-size: 1.15rem; margin-bottom: var(--a4); }
+.rechnung {
+  display: inline-block; margin-top: var(--a2);
+  font-family: var(--schrift-zahl); font-size: 1.6rem; font-weight: 700;
+  letter-spacing: .01em; color: var(--text);
+}
+.luecke { display: inline-block; min-width: 2ch; text-align: center; color: var(--blau); }
+.markiert { text-decoration-thickness: 3px; text-underline-offset: 4px; color: var(--blau); }
+
+/* Brüche im Text */
+.frac { display: inline-flex; flex-direction: column; vertical-align: middle;
+        margin: 0 .18em; text-align: center; line-height: 1.05; font-size: .82em; }
+.frac .fz { padding: 0 .3em; }
+.frac .fn { padding: 0 .3em; border-top: 2px solid currentColor; }
+.gemischt { display: inline-flex; align-items: center; gap: .12em; vertical-align: middle; }
+.gemischt .gz { font-weight: 700; }
+
+/* Zahlenfolgen und Tabellen in Aufgaben */
+.folge { display: flex; flex-wrap: wrap; gap: var(--a2); align-items: center; margin-top: var(--a3); }
+.fixwert {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 64px; min-height: 44px; padding: 0 var(--a3);
+  background: var(--flaeche-2); border-radius: var(--radius-klein);
+  font-family: var(--schrift-zahl); font-weight: 700;
+}
+.tabelle-prop { display: inline-block; margin-top: var(--a3); }
+.tabelle-prop .zeile { display: flex; align-items: center; gap: var(--a3); margin-bottom: var(--a2); }
+.tabelle-prop .zeile > span:first-child { min-width: 40px; text-align: right; font-weight: 700; }
+.nachbarn { display: flex; align-items: center; gap: var(--a3); flex-wrap: wrap; margin-top: var(--a3); }
+.nachbarn .rel { font-size: 1.2rem; color: var(--text-leise); font-weight: 700; }
+
+/* Zahlenstrahl */
+.zahlenstrahl { display: block; width: 100%; max-width: 640px; margin: var(--a4) auto 0; }
+.zahlenstrahl .achse, .zahlenstrahl .tick { stroke: var(--linie-stark); stroke-width: 2; }
+.zahlenstrahl .tick.gross { stroke: var(--text-leise); stroke-width: 2.5; }
+.zahlenstrahl .skala { fill: var(--text-leise); font-size: 15px; font-family: var(--schrift-zahl); }
+.zahlenstrahl .pfeil { fill: var(--blau); }
+.zahlenstrahl .pfeilLinie { stroke: var(--blau); stroke-width: 2.5; }
+
+/* ---------- Eingaben ---------- */
+.eingabe-bereich { margin-bottom: var(--a4); }
+.formatregel {
+  display: inline-flex; align-items: center; gap: var(--a2);
+  font-size: .85rem; font-weight: 600; color: var(--blau-dunkel);
+  background: var(--blau-hell); border-radius: var(--radius-rund);
+  padding: 6px 14px; margin-bottom: var(--a3);
+}
+
+input.feld {
+  width: 180px; min-height: var(--touch-gross);
+  font-size: 1.4rem; font-weight: 700; text-align: center;
+  font-family: var(--schrift-zahl);
+  border: 2px solid var(--linie-stark); border-radius: var(--radius-klein);
+  background: var(--flaeche); color: var(--text);
+}
+input.feld.klein { width: 110px; min-height: var(--touch); font-size: 1.15rem; }
+input.feld.richtig { border-color: var(--gut); background: var(--gut-flaeche); }
+input.feld.falsch  { border-color: var(--offen); background: var(--offen-flaeche); }
+input.feld:disabled { opacity: 1; }
+.einheit { font-weight: 700; color: var(--text-leise); margin-left: var(--a2); }
+.eingabe-zeile { display: flex; align-items: center; gap: var(--a2); flex-wrap: wrap; }
+
+/* Bruch-Eingabe */
+.bruch-eingabe { display: inline-flex; align-items: center; gap: var(--a3); }
+.bruch-eingabe .ganzfeld { width: 72px; }
+.bruch-stapel { display: inline-flex; flex-direction: column; align-items: center; gap: 6px; }
+.bruch-stapel .strich { width: 72px; height: 3px; background: var(--blau); border-radius: 2px; }
+.bruch-feld {
+  width: 72px; height: 64px; text-align: center;
+  font-size: 1.5rem; font-weight: 700; font-family: var(--schrift-zahl);
+  border: 2px solid var(--linie-stark); border-radius: var(--radius-klein);
+  background: var(--flaeche); color: var(--text);
+}
+.bruch-feld.aktiv { border-color: var(--blau); background: var(--blau-hell); }
+.bruch-feld.richtig { border-color: var(--gut); background: var(--gut-flaeche); }
+.bruch-feld.falsch  { border-color: var(--offen); background: var(--offen-flaeche); }
+
+/* Zahlentastatur */
+.tastatur { margin-top: var(--a4); max-width: 340px; }
+.tastatur .reihe { display: flex; gap: var(--a2); margin-bottom: var(--a2); }
+.tastatur .taste {
+  flex: 1; min-height: var(--touch-gross);
+  font-size: 1.3rem; font-weight: 700; font-family: var(--schrift-zahl);
+  background: var(--flaeche); border: 1px solid var(--linie-stark);
+  border-radius: var(--radius-klein); cursor: pointer; color: var(--text);
+  touch-action: manipulation;
+}
+.tastatur .taste:active { background: var(--blau-hell); border-color: var(--blau); }
+.tastatur .taste.funktion { font-size: 1rem; color: var(--blau); font-family: var(--schrift); }
+.tastatur .taste.weit { flex: 2; }
+
+/* Auswahl */
+.auswahl { display: flex; flex-direction: column; gap: var(--a3); }
+.option {
+  display: flex; align-items: center; gap: var(--a3); text-align: left;
+  min-height: var(--touch-gross); padding: var(--a3) var(--a4);
+  background: var(--flaeche); border: 2px solid var(--linie); border-radius: var(--radius-klein);
+  font: inherit; font-size: 1.05rem; color: inherit; cursor: pointer;
+  touch-action: manipulation;
+}
+.option:hover { border-color: var(--blau-linie); }
+.option[aria-checked="true"] { border-color: var(--blau); background: var(--blau-hell); }
+.option .marke {
+  width: 28px; height: 28px; flex: none; border-radius: 50%;
+  border: 2px solid var(--linie-stark); display: grid; place-items: center;
+  font-size: .8rem; font-weight: 800; color: var(--text-leise);
+}
+.option[aria-checked="true"] .marke { border-color: var(--blau); background: var(--blau); color: #fff; }
+.option.richtig { border-color: var(--gut); background: var(--gut-flaeche); }
+.option.richtig .marke { border-color: var(--gut); background: var(--gut); color: #fff; }
+.option.falsch { border-color: var(--offen); background: var(--offen-flaeche); }
+
+/* Ordnen */
+.ordnen-hinweis { font-size: .9rem; color: var(--text-leise); margin-bottom: var(--a3); }
+.ordnen-chips { display: flex; flex-wrap: wrap; gap: var(--a3); margin-bottom: var(--a4); }
+.ordnen-chip {
+  position: relative; min-width: 76px; min-height: var(--touch-gross); padding: 0 var(--a4);
+  font-size: 1.2rem; font-weight: 700; font-family: var(--schrift-zahl);
+  background: var(--flaeche); border: 2px solid var(--linie-stark);
+  border-radius: var(--radius-klein); cursor: pointer; color: var(--text);
+  touch-action: manipulation;
+}
+.ordnen-chip.gewaehlt { background: var(--blau-hell); border-color: var(--blau); color: var(--blau-tief); }
+.ordnen-chip .rang {
+  position: absolute; top: -10px; right: -10px;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--blau); color: #fff; font-size: .8rem; font-weight: 800;
+  display: grid; place-items: center;
+}
+.ordnen-ziel { display: flex; flex-wrap: wrap; gap: var(--a2); min-height: 48px; align-items: center; }
+
+/* ---------- Rückmeldung ---------- */
+.rueckmeldung {
+  display: none; gap: var(--a3); align-items: flex-start;
+  padding: var(--a3) var(--a4); border-radius: var(--radius-klein);
+  margin: var(--a4) 0; border: 1px solid transparent; font-weight: 600;
+}
+.rueckmeldung.sichtbar { display: flex; }
+.rueckmeldung.gut   { background: var(--gut-flaeche); border-color: var(--gut-linie); color: var(--gut); }
+.rueckmeldung.offen { background: var(--offen-flaeche); border-color: var(--offen-linie); color: var(--offen); }
+.rueckmeldung.info  { background: var(--info-flaeche); border-color: var(--blau-linie); color: var(--blau-tief); }
+.rueckmeldung .zeichen { font-weight: 800; flex: none; }
+
+.loesungsweg {
+  background: var(--flaeche-2); border: 1px solid var(--linie);
+  border-radius: var(--radius-klein); padding: var(--a4); margin-bottom: var(--a4);
+}
+.loesungsweg h4 { margin: 0 0 var(--a2); font-size: .8rem; text-transform: uppercase;
+                  letter-spacing: .05em; color: var(--text-leise); }
+.loesungsweg ol { margin: 0; padding-left: 1.3em; }
+.loesungsweg li { margin-bottom: var(--a1); }
+
+/* ---------- Abzeichen ---------- */
+.abzeichen-reihe { display: flex; flex-wrap: wrap; gap: var(--a2); }
+.abzeichen {
+  display: inline-flex; align-items: center; gap: var(--a2);
+  padding: 6px 12px; border-radius: var(--radius-rund);
+  border: 1px solid var(--linie); background: var(--flaeche);
+  font-size: .82rem; font-weight: 600; color: var(--text-leise);
+}
+.abzeichen.erreicht { border-color: var(--gut-linie); background: var(--gut-flaeche); color: var(--gut); }
+.abzeichen .symbol { width: 22px; height: 22px; background: none; }
+.abzeichen .symbol svg { width: 18px; height: 18px; }
+
+/* ---------- Ergebnisring ---------- */
+.ring {
+  width: 150px; height: 150px; border-radius: 50%; margin: 0 auto var(--a4);
+  display: grid; place-items: center;
+  background: conic-gradient(var(--blau) calc(var(--p) * 1%), var(--flaeche-2) 0);
+}
+.ring .innen {
+  width: 116px; height: 116px; border-radius: 50%; background: var(--flaeche);
+  display: grid; place-items: center; text-align: center;
+}
+.ring .prozent { font-size: 1.9rem; font-weight: 800; }
+.ring .punkte { font-size: .8rem; color: var(--text-leise); }
+
+/* ---------- Tabellen (Lehrpersonenbereich) ---------- */
+.tabelle { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.tabelle th, .tabelle td {
+  padding: var(--a3); border-bottom: 1px solid var(--linie); text-align: left; vertical-align: top;
+}
+.tabelle th { font-size: .78rem; text-transform: uppercase; letter-spacing: .04em;
+              color: var(--text-leise); font-weight: 700; white-space: nowrap; }
+.tabelle td.zahl { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tabelle tbody tr:hover { background: var(--flaeche-2); }
+.tabelle .leer { color: var(--text-leise); font-style: italic; }
+.tabellen-rahmen { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* ---------- Anmeldeseite ---------- */
+.anmelde-seite { min-height: 100vh; display: grid; place-items: center; padding: var(--a4); }
+.anmelde-karte { width: 100%; max-width: 420px; }
+.anmelde-kopf { text-align: center; margin-bottom: var(--a5); }
+.anmelde-kopf .zeichen {
+  width: 56px; height: 56px; border-radius: 15px; margin: 0 auto var(--a3);
+  background: var(--blau); color: #fff; display: grid; place-items: center;
+  font-size: 1.3rem; font-weight: 800;
+}
+.rollen-wechsel { text-align: center; margin-top: var(--a4); }
+
+/* ---------- Anpassung an kleine Geräte ---------- */
+@media (max-width: 700px) {
+  .inhalt { padding: var(--a4) var(--a3) var(--a7); }
+  .karte { padding: var(--a4); }
+  .aufgabe { padding: var(--a4); }
+  .rechnung { font-size: 1.35rem; }
+  .knopf { padding: 0 var(--a4); }
+  .knopfzeile .knopf { flex: 1 1 auto; }
+}
+
+/* iPad Hochformat: Aufgabe möglichst ohne Scrollen */
+@media (min-width: 700px) and (max-width: 1100px) {
+  .inhalt { max-width: 720px; }
+}
+
+/* Übungsdauer (Zeitmodus) */
+.uhr {
+  margin-left: auto;
+  font-family: var(--schrift-zahl); font-variant-numeric: tabular-nums;
+  font-weight: 700; font-size: 1rem; color: var(--text-leise);
+  background: var(--flaeche-2); border-radius: var(--radius-rund); padding: 6px 14px;
+}
+
+/* Aktivitätsverlauf (Detailansicht) */
+.verlauf svg { display: block; width: 100%; height: auto; max-height: 130px; }
+.verlauf .v-gesamt  { fill: var(--blau-linie); }
+.verlauf .v-richtig { fill: var(--blau); }
+.verlauf .v-achse   { fill: var(--text-leise); font-size: 11px; font-family: var(--schrift); }
+
+/* Filterleiste im Lehrpersonenbereich */
+.filterleiste { align-items: center; gap: var(--a3); }
+.filterleiste label { margin: 0; white-space: nowrap; }
+.filterleiste select, .filterleiste input[type="text"] { min-height: 44px; }
+
+/* Anklickbare Zeile in der Kinderliste */
+.tabelle tr.klickbar { cursor: pointer; }
+.tabelle .namensknopf {
+  background: none; border: 0; padding: 0; font: inherit; font-weight: 700;
+  color: var(--blau); cursor: pointer; text-align: left;
+}
+.tabelle .namensknopf:hover { text-decoration: underline; }

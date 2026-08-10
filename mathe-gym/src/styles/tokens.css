@@ -1,0 +1,61 @@
+/* Mathe Gym – Design-Tokens */
+
+:root {
+  /* Marke */
+  --blau:          #1F5FA9;
+  --blau-dunkel:   #164A85;
+  --blau-tief:     #123F73;
+  --blau-hell:     #E8F0FA;
+  --blau-linie:    #BBD2EC;
+
+  /* Flächen */
+  --grund:         #F6F8FB;
+  --flaeche:       #FFFFFF;
+  --flaeche-2:     #EFF3F8;
+  --linie:         #DFE5EC;
+  --linie-stark:   #C4CEDA;
+
+  /* Text */
+  --text:          #16202B;
+  --text-leise:    #5B6874;
+  --text-invers:   #FFFFFF;
+
+  /* Rückmeldung */
+  --gut:           #1E7A54;
+  --gut-flaeche:   #E6F4EC;
+  --gut-linie:     #A9D9C1;
+  --offen:         #B25E12;      /* bewusst kein Rot */
+  --offen-flaeche: #FCF0E2;
+  --offen-linie:   #EFCFA4;
+  --info:          #1F5FA9;
+  --info-flaeche:  #E8F0FA;
+
+  /* Klassenstufen */
+  --k5:            #2F9E86;
+  --k5-hell:       #E4F3EF;
+  --k6:            #5B62C4;
+  --k6-hell:       #EAEBF8;
+
+  /* Form */
+  --radius:        16px;
+  --radius-klein:  10px;
+  --radius-rund:   999px;
+  --schatten:      0 1px 2px rgba(22, 32, 43, .05), 0 2px 8px rgba(22, 32, 43, .04);
+  --schatten-hoch: 0 4px 16px rgba(22, 32, 43, .10);
+
+  /* Schrift */
+  --schrift: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --schrift-zahl: ui-monospace, "SF Mono", "Menlo", "Consolas", monospace;
+
+  /* Touch */
+  --touch:      48px;
+  --touch-gross: 56px;
+
+  /* Abstände */
+  --a1: 4px; --a2: 8px; --a3: 12px; --a4: 16px; --a5: 24px; --a6: 32px; --a7: 48px;
+}
+
+/* Klassenfarbe als aktive Akzentfarbe */
+body[data-klasse="5"] { --stufe: var(--k5); --stufe-hell: var(--k5-hell); }
+body[data-klasse="6"] { --stufe: var(--k6); --stufe-hell: var(--k6-hell); }
+body:not([data-klasse]) { --stufe: var(--blau); --stufe-hell: var(--blau-hell); }

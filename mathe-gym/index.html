@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="de-CH">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>Anmelden – Mathe Gym</title>
+<link rel="stylesheet" href="src/styles/tokens.css">
+<link rel="stylesheet" href="src/styles/basis.css">
+<link rel="stylesheet" href="src/styles/komponenten.css">
+</head>
+<body>
+
+<main class="anmelde-seite">
+  <div class="anmelde-karte">
+
+    <div class="anmelde-kopf">
+      <div class="zeichen" aria-hidden="true">MG</div>
+      <h1>Mathe Gym</h1>
+      <p class="hilfetext">Rechentraining für die 5. und 6. Klasse</p>
+    </div>
+
+    <div class="karte">
+
+      <!-- Anmeldung für Kinder -->
+      <form id="form-schueler" novalidate>
+        <h2>Anmelden</h2>
+
+        <div class="feldgruppe">
+          <label for="klassencode">Klasse</label>
+          <input type="text" id="klassencode" name="klassencode" autocomplete="off"
+                 autocapitalize="none" autocorrect="off" spellcheck="false"
+                 inputmode="text" placeholder="z. B. 5a" required>
+        </div>
+
+        <div class="feldgruppe">
+          <label for="benutzername">Benutzername</label>
+          <input type="text" id="benutzername" name="benutzername" autocomplete="username"
+                 autocapitalize="none" autocorrect="off" spellcheck="false" required>
+        </div>
+
+        <div class="feldgruppe">
+          <label for="passwort">Passwort</label>
+          <input type="password" id="passwort" name="passwort" autocomplete="current-password" required>
+        </div>
+
+        <div class="meldung fehler" id="fehler-schueler" style="display:none" role="alert"></div>
+
+        <button type="submit" class="knopf haupt gross voll" id="knopf-anmelden">Anmelden</button>
+
+        <div class="rollen-wechsel">
+          <button type="button" class="knopf leise" id="zu-erwachsen">Ich bin eine Lehrperson</button>
+        </div>
+      </form>
+
+      <!-- Anmeldung für Lehrpersonen und Administration -->
+      <form id="form-erwachsen" style="display:none" novalidate>
+        <h2>Anmeldung für Lehrpersonen</h2>
+
+        <div class="feldgruppe">
+          <label for="email">E-Mail-Adresse</label>
+          <input type="text" id="email" name="email" autocomplete="username"
+                 autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email" required>
+        </div>
+
+        <div class="feldgruppe">
+          <label for="passwort-erwachsen">Passwort</label>
+          <input type="password" id="passwort-erwachsen" name="passwort" autocomplete="current-password" required>
+        </div>
+
+        <div class="meldung fehler" id="fehler-erwachsen" style="display:none" role="alert"></div>
+
+        <button type="submit" class="knopf haupt gross voll" id="knopf-anmelden-erwachsen">Anmelden</button>
+
+        <div class="rollen-wechsel">
+          <button type="button" class="knopf leise" id="zu-schueler">Ich bin Schülerin oder Schüler</button>
+        </div>
+      </form>
+
+    </div>
+
+    <p class="hilfetext" style="text-align:center">
+      Passwort vergessen? Deine Lehrperson kann dir ein neues geben.
+    </p>
+
+  </div>
+</main>
+
+<script type="module" src="src/login.js"></script>
+</body>
+</html>

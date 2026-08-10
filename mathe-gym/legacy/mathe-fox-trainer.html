@@ -1,0 +1,2329 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MATHE FOX – Trainingsplattform 5. & 6. Klasse</title>
+<!--
+  MATHE FOX Trainingsplattform
+  ------------------------------------------------------------------
+  Eine einzige, offline lauffähige HTML-Datei für das Training von
+  Arithmetik / Zahlen und Zahlvorstellungen (Mittelstufe, 5. & 6. Klasse).
+  Inhaltlich an den Übungsdossiers "MATHE FOX 5" und "MATHE FOX 6"
+  (Bereiche 5.1–5.11 und 6.1–6.11) orientiert.
+
+  Aufbau des Codes:
+   1) CSS  (Gestaltung, responsiv, Druckansicht, Barrierefreiheit)
+   2) HTML (Grundgerüst der Bildschirme / "Views")
+   3) JavaScript
+        a) Hilfsfunktionen (Zahlen, Brüche, Zufall)
+        b) Speicherfunktionen (localStorage)
+        c) Aufgabendaten & Aufgabengeneratoren
+        d) Trainings- und Auswertungssteuerung
+        e) Abzeichen, Lehrpersonenbereich, Navigation
+  Es werden keine externen Dateien oder Bibliotheken benötigt.
+-->
+<style>
+/* =========================================================
+   1) DESIGN-TOKENS & GRUNDLAGEN
+   ========================================================= */
+:root{
+  --paper:#f6f7f4;          /* helle Grundfläche */
+  --surface:#ffffff;        /* Karten */
+  --surface-2:#eef1ee;      /* leichte Flächen */
+  --ink:#233240;           /* Haupttext */
+  --ink-soft:#5a6a76;      /* Nebentext */
+  --line:#e2e6e2;          /* Rahmen/Trennlinien */
+
+  --fox:#e07b2e;           /* Marken-Orange (Fuchs), sparsam */
+  --fox-soft:#fbe9d8;
+
+  --k5:#2f9e86;            /* 5. Klasse: Grün-Türkis */
+  --k5-soft:#dcf0ea;
+  --k6:#5b62c4;            /* 6. Klasse: Indigo */
+  --k6-soft:#e4e5f7;
+
+  --ok:#2b8a5a;            /* richtig */
+  --ok-soft:#dcefe2;
+  --warn:#c9502f;          /* Hinweis/falsch */
+  --warn-soft:#f8e2da;
+
+  --accent:var(--k5);      /* wird je nach Klasse umgeschaltet */
+  --accent-soft:var(--k5-soft);
+
+  --radius:18px;
+  --radius-sm:12px;
+  --shadow:0 4px 18px rgba(35,50,64,.07);
+  --shadow-lg:0 10px 34px rgba(35,50,64,.12);
+  --font: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: "SF Mono", "Segoe UI Mono", ui-monospace, "Roboto Mono", Menlo, Consolas, monospace;
+}
+/* Klassen-Umschaltung der Akzentfarbe */
+body[data-klasse="6"]{ --accent:var(--k6); --accent-soft:var(--k6-soft); }
+
+*{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; }
+body{
+  font-family:var(--font);
+  color:var(--ink);
+  background:var(--paper);
+  line-height:1.55;
+  font-size:17px;
+  -webkit-text-size-adjust:100%;
+}
+h1,h2,h3{ line-height:1.2; margin:0 0 .4em; font-weight:700; letter-spacing:-.01em; }
+h1{ font-size:1.9rem; }
+h2{ font-size:1.35rem; }
+h3{ font-size:1.1rem; }
+p{ margin:.4em 0; }
+button{ font-family:inherit; }
+.num{ font-variant-numeric:tabular-nums; font-feature-settings:"tnum"; }
+
+/* =========================================================
+   2) LAYOUT-RAHMEN
+   ========================================================= */
+.app{ max-width:1000px; margin:0 auto; padding:0 16px 80px; }
+
+.topbar{
+  position:sticky; top:0; z-index:30;
+  background:rgba(246,247,244,.92);
+  backdrop-filter:saturate(140%) blur(6px);
+  border-bottom:1px solid var(--line);
+  margin-bottom:20px;
+}
+.topbar-inner{
+  max-width:1000px; margin:0 auto; padding:10px 16px;
+  display:flex; align-items:center; gap:12px;
+}
+.brand{ display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:-.02em; cursor:pointer; background:none; border:0; padding:6px; border-radius:12px; color:var(--ink); }
+.brand .logo{
+  width:38px; height:38px; border-radius:12px;
+  background:var(--fox-soft); display:grid; place-items:center; font-size:22px;
+  box-shadow:inset 0 0 0 2px #f2d4b8;
+}
+.brand small{ display:block; font-weight:600; color:var(--ink-soft); font-size:.72rem; letter-spacing:.02em; margin-top:-2px;}
+.topbar .spacer{ flex:1; }
+.klasse-badge{
+  font-size:.8rem; font-weight:700; padding:6px 12px; border-radius:999px;
+  background:var(--accent-soft); color:var(--accent); border:1px solid transparent;
+}
+.klasse-badge[hidden]{ display:none; }
+
+/* =========================================================
+   3) BUTTONS
+   ========================================================= */
+.btn{
+  appearance:none; border:1px solid var(--line); background:var(--surface);
+  color:var(--ink); padding:12px 18px; border-radius:var(--radius-sm);
+  font-size:1rem; font-weight:600; cursor:pointer; transition:transform .05s, box-shadow .15s, background .15s, border-color .15s;
+  display:inline-flex; align-items:center; gap:8px; text-align:left;
+}
+.btn:hover{ box-shadow:var(--shadow); }
+.btn:active{ transform:translateY(1px); }
+.btn.primary{ background:var(--accent); color:#fff; border-color:transparent; }
+.btn.primary:hover{ box-shadow:var(--shadow-lg); }
+.btn.fox{ background:var(--fox); color:#fff; border-color:transparent; }
+.btn.ghost{ background:transparent; }
+.btn.big{ padding:15px 22px; font-size:1.06rem; border-radius:var(--radius); }
+.btn.block{ width:100%; justify-content:center; }
+.btn:disabled{ opacity:.55; cursor:not-allowed; }
+.btn .ic{ font-size:1.15em; }
+:focus-visible{ outline:3px solid var(--fox); outline-offset:2px; border-radius:6px; }
+
+/* =========================================================
+   4) KARTEN & RASTER
+   ========================================================= */
+.grid{ display:grid; gap:16px; }
+.grid.cols-2{ grid-template-columns:repeat(2,1fr); }
+.grid.cols-3{ grid-template-columns:repeat(3,1fr); }
+.card{
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+  padding:20px; box-shadow:var(--shadow);
+}
+.card.pad-lg{ padding:26px; }
+
+/* Startseite: Klassenwahl */
+.klassenwahl{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:18px 0; }
+.klassen-karte{
+  border:2px solid var(--line); border-radius:var(--radius); padding:22px; cursor:pointer;
+  background:var(--surface); text-align:left; transition:border-color .15s, box-shadow .15s, transform .05s;
+}
+.klassen-karte:hover{ box-shadow:var(--shadow-lg); }
+.klassen-karte:active{ transform:translateY(1px); }
+.klassen-karte .emoji{ font-size:34px; }
+.klassen-karte h3{ margin:.3em 0 .1em; }
+.klassen-karte.k5{ }
+.klassen-karte.k5[aria-pressed="true"]{ border-color:var(--k5); background:var(--k5-soft); }
+.klassen-karte.k6[aria-pressed="true"]{ border-color:var(--k6); background:var(--k6-soft); }
+.klassen-karte .zusatz{ color:var(--ink-soft); font-size:.9rem; }
+
+/* Themenkarten */
+.themen-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+.thema-karte{
+  text-align:left; background:var(--surface); border:1px solid var(--line);
+  border-radius:var(--radius); padding:16px 16px 14px; cursor:pointer;
+  display:flex; flex-direction:column; gap:6px; transition:box-shadow .15s, transform .05s, border-color .15s;
+}
+.thema-karte:hover{ box-shadow:var(--shadow); border-color:var(--accent); }
+.thema-karte:active{ transform:translateY(1px); }
+.thema-kopf{ display:flex; align-items:center; gap:10px; }
+.thema-icon{ width:42px; height:42px; border-radius:12px; background:var(--accent-soft); display:grid; place-items:center; font-size:22px; flex:none; }
+.thema-titel{ font-weight:700; }
+.thema-nr{ color:var(--ink-soft); font-size:.78rem; font-weight:600; }
+.thema-beschr{ color:var(--ink-soft); font-size:.9rem; }
+.thema-fuss{ display:flex; align-items:center; gap:10px; margin-top:6px; flex-wrap:wrap; }
+.chip{ font-size:.72rem; font-weight:700; padding:3px 9px; border-radius:999px; background:var(--surface-2); color:var(--ink-soft); border:1px solid var(--line); }
+.chip.klasse5{ background:var(--k5-soft); color:var(--k5); border-color:transparent; }
+.chip.klasse6{ background:var(--k6-soft); color:var(--k6); border-color:transparent; }
+.chip.stufe{ display:inline-flex; align-items:center; gap:5px; }
+
+/* Fortschrittsbalken */
+.progress{ height:9px; border-radius:999px; background:var(--surface-2); overflow:hidden; flex:1 1 90px; min-width:70px; }
+.progress > span{ display:block; height:100%; background:var(--accent); width:0; border-radius:999px; transition:width .4s ease; }
+.progress.ok > span{ background:var(--ok); }
+.progress-label{ font-size:.72rem; color:var(--ink-soft); font-weight:600; white-space:nowrap; }
+
+/* =========================================================
+   5) STARTSEITE – Kacheln der Modi
+   ========================================================= */
+.modi-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+.modus-kachel{
+  text-align:left; border:1px solid var(--line); background:var(--surface);
+  border-radius:var(--radius); padding:16px; cursor:pointer; display:flex; gap:12px; align-items:flex-start;
+  transition:box-shadow .15s, transform .05s, border-color .15s;
+}
+.modus-kachel:hover{ box-shadow:var(--shadow); border-color:var(--accent); }
+.modus-kachel:active{ transform:translateY(1px); }
+.modus-kachel .mi{ font-size:26px; line-height:1; }
+.modus-kachel b{ display:block; }
+.modus-kachel span{ font-size:.86rem; color:var(--ink-soft); }
+
+/* Statuszeile / Kennzahlen */
+.kennzahlen{ display:flex; gap:14px; flex-wrap:wrap; margin-top:6px; }
+.kennzahl{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-sm); padding:12px 16px; min-width:120px; box-shadow:var(--shadow); }
+.kennzahl .z{ font-size:1.5rem; font-weight:800; }
+.kennzahl .t{ font-size:.8rem; color:var(--ink-soft); }
+.serie-flamme{ color:var(--fox); }
+
+/* Abzeichen */
+.abzeichen-reihe{ display:flex; gap:10px; flex-wrap:wrap; }
+.abzeichen{
+  display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px;
+  border:1px solid var(--line); background:var(--surface); font-size:.85rem; font-weight:600;
+}
+.abzeichen .ac{ font-size:1.2em; filter:grayscale(1); opacity:.45; }
+.abzeichen.erreicht{ border-color:var(--fox); background:var(--fox-soft); }
+.abzeichen.erreicht .ac{ filter:none; opacity:1; }
+
+/* =========================================================
+   6) TRAININGS-BILDSCHIRM / AUFGABEN
+   ========================================================= */
+.trainer-kopf{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+.trainer-kopf .titel{ font-weight:800; font-size:1.15rem; }
+.trainer-kopf .meta{ color:var(--ink-soft); font-size:.86rem; }
+.fortschritt-zeile{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+
+.aufgabe-karte{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:24px; }
+.aufgabe-lernziel{ font-size:.8rem; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px; }
+.aufgabe-frage{ font-size:1.2rem; margin-bottom:18px; }
+.aufgabe-frage .gross{ font-size:1.5rem; font-weight:700; }
+
+/* Bruchdarstellung */
+.frac{ display:inline-flex; flex-direction:column; text-align:center; vertical-align:middle; margin:0 .12em; line-height:1; }
+.frac .z{ padding:0 .35em .05em; border-bottom:2px solid currentColor; font-weight:600; }
+.frac .n{ padding:.05em .35em 0; font-weight:600; }
+.term{ font-family:var(--mono); font-variant-numeric:tabular-nums; }
+
+/* Eingabefelder */
+.eingabe-zeile{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+input[type="text"].feld{
+  font-size:1.2rem; padding:12px 14px; border:2px solid var(--line); border-radius:var(--radius-sm);
+  width:180px; max-width:60vw; font-family:var(--mono); font-variant-numeric:tabular-nums; background:var(--surface); color:var(--ink);
+}
+input[type="text"].feld:focus{ border-color:var(--accent); outline:none; }
+input.feld.klein{ width:110px; font-size:1.05rem; }
+input.feld.richtig{ border-color:var(--ok); background:var(--ok-soft); }
+input.feld.falsch{ border-color:var(--warn); background:var(--warn-soft); }
+.einheit{ color:var(--ink-soft); font-weight:600; }
+
+/* Lückentext / Zahlenfolge */
+.folge{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-family:var(--mono); font-size:1.1rem; }
+.folge .fixwert{ padding:8px 12px; background:var(--surface-2); border-radius:10px; font-weight:700; }
+.folge input.feld{ width:92px; font-size:1rem; padding:8px 10px; }
+
+/* Multiple-Choice */
+.mc-liste{ display:grid; gap:10px; }
+.mc-option{
+  text-align:left; border:2px solid var(--line); background:var(--surface); border-radius:var(--radius-sm);
+  padding:13px 16px; cursor:pointer; font-size:1.05rem; display:flex; align-items:center; gap:12px;
+  transition:border-color .12s, background .12s;
+}
+.mc-option:hover{ border-color:var(--accent); }
+.mc-option .marke{ width:26px; height:26px; border-radius:50%; border:2px solid var(--line); display:grid; place-items:center; font-weight:800; flex:none; font-size:.85rem; color:var(--ink-soft);}
+.mc-option[aria-pressed="true"]{ border-color:var(--accent); background:var(--accent-soft); }
+.mc-option.richtig{ border-color:var(--ok); background:var(--ok-soft); }
+.mc-option.falsch{ border-color:var(--warn); background:var(--warn-soft); }
+.mc-option.richtig .marke{ border-color:var(--ok); color:var(--ok); }
+.mc-option.falsch .marke{ border-color:var(--warn); color:var(--warn); }
+
+/* Ordnen (Zahlen der Reihe nach anklicken) */
+.ordnen-hint{ color:var(--ink-soft); font-size:.9rem; margin-bottom:10px; }
+.chips-ordnen{ display:flex; gap:10px; flex-wrap:wrap; }
+.ord-chip{
+  border:2px solid var(--line); background:var(--surface); border-radius:14px; padding:12px 16px;
+  font-size:1.1rem; font-weight:700; cursor:pointer; font-family:var(--mono); position:relative; min-width:64px; text-align:center;
+}
+.ord-chip:hover{ border-color:var(--accent); }
+.ord-chip.gewaehlt{ border-color:var(--accent); background:var(--accent-soft); opacity:.6; }
+.ord-chip .rang{ position:absolute; top:-10px; right:-10px; width:24px; height:24px; border-radius:50%; background:var(--accent); color:#fff; font-size:.8rem; display:grid; place-items:center; }
+.ord-ziel{ margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; min-height:40px; }
+
+/* Zahlenstrahl-SVG */
+.zahlenstrahl{ width:100%; max-width:520px; }
+.zahlenstrahl line{ stroke:var(--ink); }
+.zahlenstrahl .tick{ stroke:var(--ink-soft); }
+.zahlenstrahl text{ font-family:var(--font); font-size:12px; fill:var(--ink-soft); }
+.zahlenstrahl .marker{ fill:var(--fox); }
+
+/* Rückmeldung */
+.feedback{ margin-top:16px; padding:14px 16px; border-radius:var(--radius-sm); font-weight:600; display:none; align-items:flex-start; gap:10px; }
+.feedback.show{ display:flex; }
+.feedback.gut{ background:var(--ok-soft); color:var(--ok); }
+.feedback.fast{ background:var(--warn-soft); color:var(--warn); }
+.feedback.info{ background:var(--accent-soft); color:var(--accent); }
+.feedback .fic{ font-size:1.2em; }
+
+.loesungsweg{ margin-top:14px; border:1px dashed var(--line); border-radius:var(--radius-sm); overflow:hidden; }
+.loesungsweg summary{ cursor:pointer; padding:12px 16px; font-weight:700; background:var(--surface-2); list-style:none; }
+.loesungsweg summary::-webkit-details-marker{ display:none; }
+.loesungsweg summary::before{ content:"💡 "; }
+.loesungsweg .inhalt{ padding:14px 16px; }
+.loesungsweg ol{ margin:.3em 0; padding-left:1.3em; }
+.loesungsweg li{ margin:.25em 0; }
+
+.aktionen{ display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }
+
+/* Testergebnis */
+.ergebnis-ring{
+  width:150px; height:150px; border-radius:50%; display:grid; place-items:center;
+  margin:6px auto 12px; background:conic-gradient(var(--accent) var(--p,0%), var(--surface-2) 0);
+}
+.ergebnis-ring .innen{ width:118px; height:118px; border-radius:50%; background:var(--surface); display:grid; place-items:center; text-align:center; }
+.ergebnis-ring .pz{ font-size:2rem; font-weight:800; }
+.ergebnis-ring .pt{ font-size:.78rem; color:var(--ink-soft); }
+
+/* Lehrpersonen-Tabelle */
+table.lp{ width:100%; border-collapse:collapse; font-size:.92rem; }
+table.lp th, table.lp td{ text-align:left; padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+table.lp th{ font-size:.78rem; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-soft); }
+table.lp td.zahl{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.lp-block{ margin-bottom:26px; }
+
+/* Modal */
+.modal-hg{ position:fixed; inset:0; background:rgba(35,50,64,.45); display:none; place-items:center; z-index:60; padding:20px; }
+.modal-hg.show{ display:grid; }
+.modal{ background:var(--surface); border-radius:var(--radius); padding:24px; max-width:440px; width:100%; box-shadow:var(--shadow-lg); }
+.modal h3{ margin-top:0; }
+.modal .modal-akt{ display:flex; gap:10px; justify-content:flex-end; margin-top:18px; }
+
+/* Umschalter (Stufe / Zeitmodus) */
+.segment{ display:inline-flex; border:1px solid var(--line); border-radius:999px; overflow:hidden; background:var(--surface); }
+.segment button{ border:0; background:transparent; padding:8px 14px; cursor:pointer; font-weight:600; font-size:.9rem; color:var(--ink-soft); }
+.segment button[aria-pressed="true"]{ background:var(--accent); color:#fff; }
+.switch-zeile{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+
+.toast{
+  position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
+  background:var(--ink); color:#fff; padding:12px 18px; border-radius:999px; font-weight:600;
+  box-shadow:var(--shadow-lg); opacity:0; transition:opacity .25s, transform .25s; z-index:70; pointer-events:none;
+  display:flex; align-items:center; gap:8px; max-width:90vw;
+}
+.toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+.section-titel{ display:flex; align-items:center; gap:10px; margin:26px 0 10px; }
+.section-titel .bar{ width:6px; height:22px; border-radius:3px; background:var(--accent); }
+.hinweistext{ color:var(--ink-soft); font-size:.9rem; }
+.timer-anzeige{ font-family:var(--mono); font-weight:700; color:var(--fox); }
+
+/* Views ein-/ausblenden */
+.view{ display:none; }
+.view.aktiv{ display:block; animation:fade .25s ease; }
+@keyframes fade{ from{ opacity:0; transform:translateY(6px);} to{ opacity:1; transform:none; } }
+
+/* =========================================================
+   7) RESPONSIV
+   ========================================================= */
+@media (max-width:720px){
+  body{ font-size:16px; }
+  h1{ font-size:1.55rem; }
+  .klassenwahl{ grid-template-columns:1fr; }
+  .themen-grid{ grid-template-columns:1fr; }
+  .modi-grid{ grid-template-columns:1fr; }
+  .grid.cols-2, .grid.cols-3{ grid-template-columns:1fr; }
+  .aufgabe-karte{ padding:18px; }
+  .brand small{ display:none; }
+}
+
+/* =========================================================
+   8) DRUCKANSICHT (Lehrpersonen-Auswertung)
+   ========================================================= */
+@media print{
+  .topbar, .modus-kachel, .btn, .no-print, .modal-hg{ display:none !important; }
+  body{ background:#fff; font-size:12px; }
+  .app{ padding:0; max-width:none; }
+  .view{ display:none !important; }
+  #view-lehrer.aktiv{ display:block !important; }
+  .card{ box-shadow:none; border:1px solid #bbb; break-inside:avoid; }
+  table.lp th{ color:#000; }
+}
+</style>
+</head>
+<body>
+
+<!-- ================= KOPFLEISTE ================= -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <button class="brand" id="btn-home" aria-label="Zur Startseite">
+      <span class="logo" aria-hidden="true">🦊</span>
+      <span>MATHE FOX<small>Trainingsplattform · 5. &amp; 6. Klasse</small></span>
+    </button>
+    <span class="spacer"></span>
+    <span class="klasse-badge" id="klasse-badge" hidden></span>
+  </div>
+</header>
+
+<main class="app">
+
+  <!-- ================= START-VIEW ================= -->
+  <section id="view-start" class="view aktiv" aria-label="Startseite">
+    <div class="card pad-lg">
+      <h1>Willkommen beim MATHE FOX 🦊</h1>
+      <p class="hinweistext" style="font-size:1.02rem;max-width:60ch">
+        Hier übst du <strong>Zahlen, Brüche, Dezimalzahlen und das Rechnen</strong> – Schritt für Schritt,
+        in deinem Tempo. Wähle deine Klasse, such dir ein Thema aus und leg los. Fehler sind erlaubt –
+        du bekommst immer eine Rückmeldung und, wenn du magst, einen Tipp.
+      </p>
+
+      <h2 style="margin-top:22px">Wähle deine Klasse</h2>
+      <div class="klassenwahl" role="group" aria-label="Klasse wählen">
+        <button class="klassen-karte k5" data-klasse="5" aria-pressed="false">
+          <div class="emoji" aria-hidden="true">🌱</div>
+          <h3>5. Klasse</h3>
+          <div class="zusatz">Brüche &amp; Anteile, Dezimalzahlen, Stellenwert, flexibles Rechnen, Grössen, Runden, Gleichungen, Mittelwert.</div>
+        </button>
+        <button class="klassen-karte k6" data-klasse="6" aria-pressed="false">
+          <div class="emoji" aria-hidden="true">🚀</div>
+          <h3>6. Klasse</h3>
+          <div class="zusatz">Erweitern &amp; Kürzen, ggT/kgV, Prozente, Dezimalrechnen, Terme &amp; Klammern, Flächen &amp; Volumen, Kombinatorik.</div>
+        </button>
+      </div>
+
+      <!-- Kennzahlen / Fortschritt -->
+      <div id="start-fortschritt"></div>
+    </div>
+
+    <!-- Modi -->
+    <div id="start-modi" hidden>
+      <div class="section-titel"><span class="bar"></span><h2 style="margin:0">Was möchtest du tun?</h2></div>
+      <div class="switch-zeile no-print" style="margin-bottom:14px">
+        <span class="progress-label">Schwierigkeit:</span>
+        <div class="segment" id="stufe-segment" role="group" aria-label="Schwierigkeitsstufe">
+          <button data-stufe="basis" aria-pressed="false">● Basis</button>
+          <button data-stufe="standard" aria-pressed="true">●● Standard</button>
+          <button data-stufe="profi" aria-pressed="false">●●● Profi</button>
+        </div>
+      </div>
+      <div class="modi-grid">
+        <button class="modus-kachel" data-modus="thema"><span class="mi">📚</span><span><b>Training starten</b><span>Thema auswählen und üben</span></span></button>
+        <button class="modus-kachel" data-modus="gemischt"><span class="mi">🎯</span><span><b>Gemischtes Training</b><span>Aufgaben aus mehreren Themen</span></span></button>
+        <button class="modus-kachel" data-modus="schnell"><span class="mi">⚡</span><span><b>Schnelltraining</b><span>5 zufällige Aufgaben</span></span></button>
+        <button class="modus-kachel" data-modus="fehler"><span class="mi">🔁</span><span><b>Meine Fehler üben</b><span id="fehler-anzahl">Noch keine Fehler</span></span></button>
+        <button class="modus-kachel" data-modus="test"><span class="mi">📝</span><span><b>Lernstand testen</b><span>Kurzer Test mit Auswertung</span></span></button>
+        <button class="modus-kachel" data-modus="herausforderung"><span class="mi">🏆</span><span><b>Herausforderung</b><span>Kniffligere Aufgaben (Profi)</span></span></button>
+      </div>
+
+      <div class="section-titel"><span class="bar"></span><h2 style="margin:0">Deine Abzeichen</h2></div>
+      <div class="abzeichen-reihe" id="abzeichen-reihe"></div>
+
+      <div class="switch-zeile" style="margin-top:26px">
+        <button class="btn ghost" id="btn-lehrer"><span class="ic">👩‍🏫</span> Für Lehrpersonen</button>
+        <button class="btn ghost" id="btn-reset"><span class="ic">🗑️</span> Lernfortschritt zurücksetzen</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= THEMEN-VIEW ================= -->
+  <section id="view-themen" class="view" aria-label="Themenübersicht">
+    <button class="btn ghost" data-nav="start" style="margin-bottom:12px">← Zur Startseite</button>
+    <div class="section-titel"><span class="bar"></span><h2 style="margin:0" id="themen-titel">Themen</h2></div>
+    <p class="hinweistext" id="themen-unter">Wähle ein Thema zum Üben. Jedes Thema zeigt dir dein Ziel und deinen Fortschritt.</p>
+    <div class="themen-grid" id="themen-grid"></div>
+  </section>
+
+  <!-- ================= TRAINING-VIEW ================= -->
+  <section id="view-training" class="view" aria-label="Training">
+    <button class="btn ghost" id="btn-train-zurueck" style="margin-bottom:12px">← Beenden</button>
+    <div class="trainer-kopf">
+      <span class="titel" id="train-titel">Training</span>
+      <span class="meta" id="train-meta"></span>
+      <span class="spacer" style="flex:1"></span>
+      <span class="timer-anzeige" id="train-timer" hidden>⏱️ 00:00</span>
+    </div>
+    <div class="fortschritt-zeile">
+      <div class="progress"><span id="train-progressbar"></span></div>
+      <span class="progress-label" id="train-progresslabel"></span>
+    </div>
+    <div id="aufgabe-container"></div>
+  </section>
+
+  <!-- ================= ERGEBNIS-VIEW (Test) ================= -->
+  <section id="view-ergebnis" class="view" aria-label="Testauswertung">
+    <div class="card pad-lg" style="text-align:center">
+      <h2 id="ergebnis-titel">Auswertung</h2>
+      <div class="ergebnis-ring" id="ergebnis-ring"><div class="innen"><div><div class="pz" id="ergebnis-prozent">0%</div><div class="pt" id="ergebnis-punkte">0 / 0 Punkte</div></div></div></div>
+      <p id="ergebnis-text" style="font-size:1.1rem"></p>
+      <div id="ergebnis-vorschlag" style="margin-top:8px"></div>
+      <div class="aktionen" style="justify-content:center">
+        <button class="btn primary big" id="btn-ergebnis-weiter">Weiterüben</button>
+        <button class="btn ghost big" data-nav="start">Zur Startseite</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= LEHRPERSONEN-VIEW ================= -->
+  <section id="view-lehrer" class="view" aria-label="Bereich für Lehrpersonen">
+    <button class="btn ghost no-print" data-nav="start" style="margin-bottom:12px">← Zur Startseite</button>
+    <div class="card pad-lg">
+      <h1>Für Lehrpersonen</h1>
+      <p class="hinweistext">
+        Alle Angaben werden ausschliesslich lokal auf diesem Gerät gespeichert (<code>localStorage</code>).
+        Es werden keine Namen erfasst und keine Daten ins Internet übertragen.
+      </p>
+      <div class="aktionen no-print">
+        <button class="btn fox" id="btn-drucken"><span class="ic">🖨️</span> Auswertung drucken</button>
+      </div>
+    </div>
+    <div id="lehrer-inhalt"></div>
+  </section>
+
+</main>
+
+<!-- ================= MODAL (Sicherheitsabfragen) ================= -->
+<div class="modal-hg" id="modal-hg" role="dialog" aria-modal="true" aria-labelledby="modal-titel">
+  <div class="modal">
+    <h3 id="modal-titel">Bestätigen</h3>
+    <p id="modal-text"></p>
+    <div class="modal-akt">
+      <button class="btn ghost" id="modal-abbrechen">Abbrechen</button>
+      <button class="btn primary" id="modal-ok">Ja, fortfahren</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ============================================================
+   ===============  MATHE FOX – JAVASCRIPT  ===================
+   ============================================================ */
+"use strict";
+
+/* ------------------------------------------------------------
+   a) ALLGEMEINE HILFSFUNKTIONEN
+   ------------------------------------------------------------ */
+const $  = (sel, el=document) => el.querySelector(sel);
+const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
+
+/* Zufalls-Helfer */
+function randInt(min, max){ return Math.floor(Math.random()*(max-min+1))+min; }
+function choice(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1; i>0; i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+/* Rundung gegen Gleitkomma-Fehler */
+function r(x, dez=6){ const f=Math.pow(10,dez); return Math.round(x*f)/f; }
+
+/* Schweizer Zahlenformat: Dezimalpunkt, Tausender-Apostroph (’) */
+function fmt(n){
+  if(typeof n !== "number" || !isFinite(n)) return String(n);
+  n = r(n, 9);
+  const neg = n < 0; n = Math.abs(n);
+  let s = n.toString();
+  if(s.indexOf("e") !== -1){ s = n.toFixed(9).replace(/0+$/,"").replace(/\.$/,""); }
+  let [ganz, dez] = s.split(".");
+  ganz = ganz.replace(/\B(?=(\d{3})+(?!\d))/g, "\u2019"); /* ’ als Tausendertrennung */
+  let out = dez ? ganz + "." + dez : ganz;
+  return (neg ? "\u2212" : "") + out; /* echtes Minuszeichen */
+}
+
+/* Eingabe zu Zahl: Apostroph/Leerzeichen (Tausender) entfernen, Komma -> Punkt */
+function parseNum(str){
+  if(str === null || str === undefined) return NaN;
+  let s = String(str).trim();
+  if(s === "") return NaN;
+  s = s.replace(/[\u2019'’\s]/g, "");     /* Tausender-Zeichen und Leerzeichen weg */
+  s = s.replace(/\u2212/g, "-");          /* echtes Minus -> normales Minus */
+  s = s.replace(",", ".");                /* Komma als Dezimaltrennzeichen zulassen */
+  if(!/^-?\d*\.?\d+$/.test(s)) return NaN;
+  return parseFloat(s);
+}
+/* Zahlenvergleich mit kleiner Toleranz */
+function gleichZahl(user, korrekt, tol=1e-6){
+  const u = parseNum(user);
+  if(isNaN(u)) return false;
+  return Math.abs(u - korrekt) < tol;
+}
+
+/* --- Bruch-Hilfen --- */
+function ggT(a,b){ a=Math.abs(a); b=Math.abs(b); while(b){ [a,b]=[b,a%b]; } return a||1; }
+function kgV(a,b){ return Math.abs(a*b)/ggT(a,b); }
+function kuerze(z,n){ const g=ggT(z,n)||1; return [z/g, n/g]; }
+/* HTML für einen Bruch */
+function bruchHTML(z,n){
+  return '<span class="frac"><span class="z">'+z+'</span><span class="n">'+n+'</span></span>';
+}
+/* Bruch-Eingabe parsen: "3/4", "3", "1 1/2" (gemischt) */
+function parseBruch(str){
+  if(str==null) return null;
+  let s = String(str).trim().replace(/\u2019|'|’/g,"");
+  if(s==="") return null;
+  let m;
+  /* gemischte Zahl: "1 1/2" oder "1_1/2" */
+  m = s.match(/^(-?\d+)\s+(\d+)\/(\d+)$/);
+  if(m){ const g=parseInt(m[1]), z=parseInt(m[2]), n=parseInt(m[3]); if(n===0) return null;
+         const vz = g<0?-1:1; return { z: vz*(Math.abs(g)*n + z), n:n }; }
+  /* einfacher Bruch */
+  m = s.match(/^(-?\d+)\/(-?\d+)$/);
+  if(m){ const n=parseInt(m[2]); if(n===0) return null; return { z:parseInt(m[1]), n:n }; }
+  /* ganze Zahl */
+  m = s.match(/^-?\d+$/);
+  if(m){ return { z:parseInt(s), n:1 }; }
+  /* Dezimalzahl -> Bruch */
+  m = s.replace(",",".").match(/^-?\d*\.?\d+$/);
+  if(m){ const val=parseFloat(s.replace(",",".")); const n=1000000; return { z:Math.round(val*n), n:n }; }
+  return null;
+}
+/* Prüfe Bruch: wertgleich? (und optional vollständig gekürzt) */
+function gleichBruch(user, z, n, opt={}){
+  const u = parseBruch(user);
+  if(!u) return false;
+  const wertGleich = (u.z * n) === (z * u.n);
+  if(!wertGleich) return false;
+  if(opt.gekuerzt){ return ggT(u.z, u.n) === 1; }
+  return true;
+}
+
+/* Zufällige, nicht wiederholende Rückmeldungen */
+const LOB = ["Das stimmt!", "Gut gerechnet!", "Genau richtig!", "Super gemacht!", "Perfekt!", "Stark – weiter so!", "Richtig!", "Das sitzt!"];
+const FAST = ["Fast! Schau nochmals genau hin.", "Noch nicht ganz – versuch es nochmal.", "Knapp daneben. Probier einen zweiten Versuch.", "Das war noch nicht richtig. Du schaffst das!"];
+function zufallLob(){ return choice(LOB); }
+function zufallFast(){ return choice(FAST); }
+
+/* ------------------------------------------------------------
+   b) SPEICHER (localStorage)
+   ------------------------------------------------------------ */
+const STORAGE_KEY = "mathefox_v1";
+
+function standardState(){
+  return {
+    klasse: null,
+    stufe: "standard",
+    zeitmodus: false,
+    bearbeitet: 0,
+    richtig: 0,
+    serie: 0,
+    bestSerie: 0,
+    proThema: {},            /* id -> {bearbeitet, richtig} */
+    fehler: [],              /* Liste gespeicherter Aufgaben (Snapshots) */
+    fehlerGemeistert: 0,
+    tests: [],               /* {datum, klasse, prozent, punkte, max} */
+    zuletztThemen: [],       /* zuletzt trainierte Themen-IDs */
+    abzeichen: { erste:false, serie5:false, fehler:false, thema:false, test:false }
+  };
+}
+let state = ladeState();
+
+function ladeState(){
+  try{
+    const roh = localStorage.getItem(STORAGE_KEY);
+    if(!roh) return standardState();
+    const geladen = JSON.parse(roh);
+    return Object.assign(standardState(), geladen);
+  }catch(e){
+    return standardState();
+  }
+}
+function speichere(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch(e){ /* Speicher evtl. voll oder deaktiviert – App läuft trotzdem weiter */ }
+}
+
+/* ------------------------------------------------------------
+   c) KLEINE BAUSTEINE FÜR AUFGABEN
+   ------------------------------------------------------------ */
+/* SVG-Zahlenstrahl: min..max mit Markierung bei wert */
+function zahlenstrahlSVG(min, max, wert, teil){
+  const W=520, H=70, padL=24, padR=24;
+  const x = v => padL + (v-min)/(max-min)*(W-padL-padR);
+  let ticks = "";
+  const n = teil;
+  for(let i=0;i<=n;i++){
+    const v = min + (max-min)*i/n;
+    const gross = (i===0 || i===n);
+    ticks += '<line class="tick" x1="'+x(v)+'" y1="'+(gross?24:30)+'" x2="'+x(v)+'" y2="'+(gross?46:40)+'" stroke-width="'+(gross?2:1)+'"/>';
+    if(gross){ ticks += '<text x="'+x(v)+'" y="60" text-anchor="middle">'+fmt(v)+'</text>'; }
+  }
+  const mx = x(wert);
+  const marker = '<polygon class="marker" points="'+mx+',20 '+(mx-7)+',6 '+(mx+7)+',6"/>'
+               + '<line x1="'+mx+'" y1="20" x2="'+mx+'" y2="35" stroke="var(--fox)" stroke-width="2"/>';
+  return '<svg class="zahlenstrahl" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Zahlenstrahl von '+fmt(min)+' bis '+fmt(max)+' mit Markierung">'
+       + '<line x1="'+padL+'" y1="35" x2="'+(W-padR)+'" y2="35" stroke-width="2"/>'
+       + ticks + marker + '</svg>';
+}
+
+/* ------------------------------------------------------------
+   c) AUFGABEN-BAUKASTEN (Fabrikfunktionen)
+   Alle Aufgaben sind reine Daten (ohne Funktionen) und damit
+   für die Fehlerliste (localStorage) speicherbar.
+   ------------------------------------------------------------ */
+function mkZahl(o){ return { typ:"input", frageHTML:o.frage, einheit:o.einheit||"",
+  check:{art:"zahl", wert:o.wert, tol:o.tol||1e-6}, platzhalter:o.platzhalter||"",
+  hinweis:o.hinweis||"", loesungHTML:o.loesung||"", lernziel:o.lernziel||"" }; }
+function mkText(o){ return { typ:"input", frageHTML:o.frage, einheit:o.einheit||"",
+  check:{art:"text", akzeptiert:o.akzeptiert}, platzhalter:o.platzhalter||"",
+  hinweis:o.hinweis||"", loesungHTML:o.loesung||"", lernziel:o.lernziel||"" }; }
+function mkBruch(o){ return { typ:"input", frageHTML:o.frage, einheit:o.einheit||"",
+  check:{art:"bruch", z:o.z, n:o.n, gekuerzt:!!o.gekuerzt}, platzhalter:o.platzhalter||"z/n",
+  hinweis:o.hinweis||"", loesungHTML:o.loesung||"", lernziel:o.lernziel||"" }; }
+function mkMC(o){ return { typ:"mc", frageHTML:o.frage, optionen:o.optionen, richtig:o.richtig,
+  hinweis:o.hinweis||"", loesungHTML:o.loesung||"", lernziel:o.lernziel||"" }; }
+function mkMulti(o){ return { typ:"multiinput", frageHTML:o.frage, felder:o.felder,
+  hinweis:o.hinweis||"", loesungHTML:o.loesung||"", lernziel:o.lernziel||"" }; }
+function mkOrder(o){ return { typ:"order", frageHTML:o.frage, werte:o.werte,
+  anzeige:o.anzeige||o.werte.map(fmt), hinweis:o.hinweis||"", loesungHTML:o.loesung||"", lernziel:o.lernziel||"" }; }
+
+/* Vergleichs-Multiple-Choice (< , > , =) */
+function mkVergleich(frage, richtigZeichen, o){
+  const opt = ["ist kleiner als  (&lt;)", "ist gleich  (=)", "ist grösser als  (&gt;)"];
+  const idx = richtigZeichen==="<" ? 0 : (richtigZeichen==="=" ? 1 : 2);
+  return mkMC({ frage:frage, optionen:opt, richtig:idx, hinweis:o.hinweis||"", loesung:o.loesung||"", lernziel:o.lernziel||"" });
+}
+
+/* Kleiner Bruchzeichen-Helfer für Fliesstext */
+const F = bruchHTML;
+
+/* ------------------------------------------------------------
+   c1) GENERATOREN 5. KLASSE
+   Jeder Generator: (stufe) => Aufgabenobjekt
+   ------------------------------------------------------------ */
+
+/* --- 5.1 Brüche & Anteile --- */
+function g51_anteil(stufe){
+  let d, z, teil;
+  if(stufe==="basis"){ d=choice([2,3,4,5]); z=1; teil=randInt(2,9); }
+  else if(stufe==="profi"){ d=choice([4,5,6,8,10,20]); z=randInt(1,d-1); teil=randInt(5,20); }
+  else { d=choice([3,4,5,6,8,10]); z=randInt(1,d-1); teil=randInt(2,12); }
+  const B=d*teil, res=teil*z;
+  return mkZahl({ lernziel:"Anteil einer Zahl bestimmen",
+    frage:'Bestimme den Anteil: '+F(z,d)+' von <span class="gross num">'+fmt(B)+'</span> = ?',
+    wert:res,
+    hinweis:"Teile die Zahl zuerst durch den Nenner ("+d+") und nimm das Ergebnis mal den Zähler ("+z+").",
+    loesung:"<ol><li>"+fmt(B)+" : "+d+" = "+fmt(teil)+" (das ist "+F(1,d)+")</li><li>"+fmt(teil)+" · "+z+" = <strong>"+fmt(res)+"</strong></li></ol>" });
+}
+function g51_sach(stufe){
+  const d=choice([3,4,6,8]), z=(stufe==="basis")?1:randInt(1,d-1);
+  const teil=randInt(2,6), B=d*teil, res=teil*z;
+  const dinge=choice([["Kinder","Mädchen"],["Sackgeld-Franken","gespart"],["Bonbons","verschenkt"]]);
+  return mkZahl({ lernziel:"Anteil in einer Sachaufgabe",
+    frage:"Eine Gruppe besteht aus <strong>"+B+" "+dinge[0]+"</strong>. "+F(z,d)+" davon sind "+dinge[1]+". Wie viele sind das?",
+    wert:res, hinweis:B+" : "+d+" rechnen, dann · "+z+".",
+    loesung:"<ol><li>"+B+" : "+d+" = "+teil+"</li><li>"+teil+" · "+z+" = <strong>"+res+"</strong></li></ol>" });
+}
+function g51_benennen(stufe){
+  const d=randInt(3,8), z=randInt(1,d-1);
+  const falsch=[ [z, d+1], [z+1, d], [d-z, d] ].filter(p=>!(p[0]===z&&p[1]===d));
+  const opts=shuffle([ {z:z,n:d,ok:true}, {z:falsch[0][0],n:falsch[0][1]}, {z:falsch[1][0],n:falsch[1][1]}, {z:z, n:d+2} ]);
+  return mkMC({ lernziel:"Bruch benennen",
+    frage:"Von <strong>"+d+"</strong> gleich grossen Teilen sind <strong>"+z+"</strong> gefärbt. Welcher Bruch ist gemeint?",
+    optionen:opts.map(o=>F(o.z,o.n)), richtig:opts.findIndex(o=>o.ok),
+    hinweis:"Der Zähler (oben) zählt die gefärbten Teile, der Nenner (unten) alle Teile.",
+    loesung:z+" gefärbte von "+d+" Teilen = "+F(z,d)+"." });
+}
+
+/* --- 5.3 Dezimalzahlen & Stellenwert --- */
+function g53_stellenwert(stufe){
+  const namen=["Zehntel","Hundertstel","Tausendstel"];
+  const stellen=(stufe==="basis")?2:3;
+  const g=randInt(0,49);
+  let ziffern=[]; for(let i=0;i<stellen;i++) ziffern.push(randInt(0,9));
+  if(ziffern.every(x=>x===0)) ziffern[0]=randInt(1,9);
+  const pos=randInt(0, stellen-1);
+  if(ziffern[pos]===0) ziffern[pos]=randInt(1,9);
+  const dezStr=ziffern.join("");
+  const zahlStr = g+"."+dezStr;
+  let anzeige=""; for(let i=0;i<ziffern.length;i++){ anzeige += (i===pos)?'<u><strong>'+ziffern[i]+'</strong></u>':ziffern[i]; }
+  const korrektText = ziffern[pos]+" "+namen[pos];
+  const opts=shuffle([ korrektText, ziffern[pos]+" "+namen[(pos+1)%3], ziffern[pos]+" "+namen[(pos+2)%3], ziffern[pos]+" Einer" ]);
+  return mkMC({ lernziel:"Stellenwert benennen",
+    frage:"Welchen Wert hat die <u>unterstrichene</u> Ziffer?<br><span class='gross num'>"+g+"."+anzeige+"</span>",
+    optionen:opts, richtig:opts.indexOf(korrektText),
+    hinweis:"Nach dem Punkt kommen zuerst die Zehntel, dann die Hundertstel, dann die Tausendstel.",
+    loesung:"Die "+(pos+1)+". Stelle nach dem Punkt sind die "+namen[pos]+". Also: <strong>"+korrektText+"</strong>." });
+}
+function g53_mal10(stufe){
+  const op=choice(["mal","geteilt"]);
+  const faktor=choice(stufe==="basis"?[10,100]:[10,100,1000]);
+  let basis, res, frageZahl;
+  if(op==="mal"){ const k=randInt(1,999)/1000; basis=r(k); res=r(k*faktor); }
+  else { basis=r(randInt(1,9999)/(stufe==="basis"?10:100)); res=r(basis/faktor); }
+  const zeichen = op==="mal" ? " · " : " : ";
+  const a = op==="mal" ? faktor : basis;
+  const b = op==="mal" ? basis : faktor;
+  return mkZahl({ lernziel:"Mit 10, 100, 1000 multiplizieren/dividieren",
+    frage:"Rechne aus:<br><span class='gross num'>"+fmt(a)+zeichen+fmt(b)+"</span> = ?",
+    wert:res,
+    hinweis: op==="mal" ? "Beim Multiplizieren wandert das Komma nach rechts (pro Null eine Stelle)." : "Beim Dividieren wandert das Komma nach links (pro Null eine Stelle).",
+    loesung:"Der Faktor "+faktor+" hat "+String(faktor).length-1+" Null(en). Verschiebe den Dezimalpunkt entsprechend: <strong>"+fmt(res)+"</strong>." });
+}
+function g53_dezAddSub(stufe){
+  const nk = stufe==="basis"?1:(stufe==="profi"?3:2);
+  const teiler=Math.pow(10,nk);
+  const op=choice(["+","−"]);
+  let a=randInt(1, stufe==="profi"?3000:200)/teiler, b=randInt(1, 100)/teiler;
+  a=r(a); b=r(b);
+  if(op==="−" && b>a){ [a,b]=[b,a]; }
+  const res = r(op==="+" ? a+b : a-b);
+  return mkZahl({ lernziel:"Dezimalzahlen addieren und subtrahieren",
+    frage:"Rechne aus:<br><span class='gross num'>"+fmt(a)+" "+op+" "+fmt(b)+"</span> = ?",
+    wert:res, hinweis:"Schreibe die Zahlen so untereinander, dass die Dezimalpunkte genau übereinander stehen.",
+    loesung:fmt(a)+" "+op+" "+fmt(b)+" = <strong>"+fmt(res)+"</strong>" });
+}
+function g53_folge(stufe){
+  const schrittProfi=choice([0.05,0.25,0.6]);
+  const schritt = stufe==="basis"?choice([0.1,0.5,1]):(stufe==="profi"?schrittProfi:choice([0.1,0.2,0.25,0.5]));
+  const start = r(randInt(0,20)/ (schritt<0.1?100:10));
+  const werte=[]; for(let i=0;i<6;i++) werte.push(r(start+i*schritt));
+  const blanks = shuffle([0,1,2,3,4,5]).slice(0, stufe==="basis"?2:3).sort((a,b)=>a-b);
+  let frage='Setze die Zahlenfolge fort (Schrittweite '+fmt(schritt)+'):<div class="folge" style="margin-top:10px">';
+  const felder=[]; let fi=0;
+  werte.forEach((w,i)=>{
+    if(blanks.includes(i)){ frage+='{{'+fi+'}}'; felder.push({check:{art:"zahl",wert:w}}); fi++; }
+    else { frage+='<span class="fixwert num">'+fmt(w)+'</span>'; }
+  });
+  frage+='</div>';
+  return mkMulti({ lernziel:"In gleichen Schritten zählen", frage:frage, felder:felder,
+    hinweis:"Finde zuerst die Schrittweite zwischen zwei bekannten Zahlen.",
+    loesung:"Die Schrittweite ist "+fmt(schritt)+". Vollständige Folge: "+werte.map(fmt).join(", ")+"." });
+}
+
+/* --- 5.4 Proportionalität & Wertetabellen --- */
+function g54_satz(stufe){
+  const proEinheit = choice([[ "Tische","Personen",6],["Dosen Farbe","kg",5],["Schachteln","Eier",6],["Kisten","Äpfel",30]]);
+  const [d1,d2,ratio]=proEinheit;
+  const a=randInt(2,6), b=(stufe==="profi"?randInt(7,12):randInt(2,8));
+  const gegebenAnzahl=a, gegebenWert=a*ratio, fragAnzahl=b, res=b*ratio;
+  return mkZahl({ lernziel:"Proportionale Sätze ergänzen",
+    frage:"Wenn "+gegebenAnzahl+" "+d1+" = <strong>"+fmt(gegebenWert)+" "+d2+"</strong>, dann sind "+fragAnzahl+" "+d1+" = ? "+d2+".",
+    wert:res, einheit:d2,
+    hinweis:"Berechne zuerst den Wert für <em>ein</em> "+d1.replace(/s$/,"")+".",
+    loesung:"<ol><li>1 "+d1+" → "+fmt(gegebenWert)+" : "+gegebenAnzahl+" = "+fmt(ratio)+" "+d2+"</li><li>"+fragAnzahl+" · "+fmt(ratio)+" = <strong>"+fmt(res)+" "+d2+"</strong></li></ol>" });
+}
+function g54_tabelle(stufe){
+  const proEinheit=choice([1.5,0.4,2,3,0.6]);
+  const bekannt=randInt(2,5), frag=choice([6,8,10,12].filter(x=>x!==bekannt));
+  const wertBekannt=r(bekannt*proEinheit), res=r(frag*proEinheit);
+  return mkMulti({ lernziel:"Wertetabelle ergänzen",
+    frage:"Ergänze die fehlenden Werte (proportional). 1 → "+fmt(proEinheit)+".<div class='folge' style='margin-top:10px'>"
+      +"<span class='fixwert'>"+bekannt+" → "+fmt(wertBekannt)+"</span>"
+      +"<span class='fixwert'>1 → {{0}}</span>"
+      +"<span class='fixwert'>"+frag+" → {{1}}</span></div>",
+    felder:[{check:{art:"zahl",wert:proEinheit}},{check:{art:"zahl",wert:res}}],
+    hinweis:"Teile den bekannten Wert durch seine Anzahl, um den Wert für 1 zu erhalten.",
+    loesung:"1 → "+fmt(wertBekannt)+" : "+bekannt+" = "+fmt(proEinheit)+"; "+frag+" → "+frag+" · "+fmt(proEinheit)+" = <strong>"+fmt(res)+"</strong>." });
+}
+
+/* --- 5.5 Rechnen & flexibel rechnen --- */
+function g55_kopf(stufe){
+  const op=choice(["+","−"]);
+  const stufeFak = stufe==="basis"?10:(stufe==="profi"?1000:100);
+  let a=randInt(2,90)*stufeFak, b=randInt(1,80)*stufeFak;
+  if(op==="−" && b>a){ [a,b]=[b,a]; }
+  const res = op==="+"?a+b:a-b;
+  return mkZahl({ lernziel:"Im Kopf addieren und subtrahieren",
+    frage:"Rechne im Kopf:<br><span class='gross num'>"+fmt(a)+" "+op+" "+fmt(b)+"</span> = ?",
+    wert:res, hinweis:"Rechne mit den Tausendern/Hundertern getrennt und zähle zusammen.",
+    loesung:fmt(a)+" "+op+" "+fmt(b)+" = <strong>"+fmt(res)+"</strong>" });
+}
+function g55_malzehner(stufe){
+  const a=randInt(2,9)*choice(stufe==="basis"?[1,10]:[10,100]);
+  const b=randInt(2,9)*choice(stufe==="basis"?[10]:[10,100,1000]);
+  const res=a*b;
+  return mkZahl({ lernziel:"Zehner-, Hunderterzahlen multiplizieren",
+    frage:"Rechne aus:<br><span class='gross num'>"+fmt(a)+" · "+fmt(b)+"</span> = ?",
+    wert:res, hinweis:"Multipliziere zuerst die Anfangsziffern, dann hänge alle Nullen an.",
+    loesung:"Ziffern: "+(a/Math.pow(10,String(a).length-1))+" · "+(b/Math.pow(10,String(b).length-1))+", dann Nullen anhängen → <strong>"+fmt(res)+"</strong>." });
+}
+function g55_durchzehner(stufe){
+  const q=randInt(2,9), t=choice(stufe==="basis"?[10]:[10,100]);
+  const divisor=randInt(2,8)*t, res=q*t, a=res*divisor/ (t) ; /* rebuild clean */
+  const dividend=res*divisor; /* dividend : divisor = res? no */
+  /* baue sauber: dividend = divisor * ergebnis */
+  const ergebnis=randInt(3,40)*choice([1,10]);
+  const div=randInt(2,9)*choice([10,100]);
+  const dvd=div*ergebnis;
+  return mkZahl({ lernziel:"Durch Zehner-/Hunderterzahlen dividieren",
+    frage:"Rechne aus:<br><span class='gross num'>"+fmt(dvd)+" : "+fmt(div)+"</span> = ?",
+    wert:ergebnis, hinweis:"Kürze gemeinsame Nullen bei Dividend und Divisor weg.",
+    loesung:fmt(dvd)+" : "+fmt(div)+" = <strong>"+fmt(ergebnis)+"</strong>" });
+}
+function g55_verteilung(stufe){
+  const a=choice([3,4,6,7,8]);
+  const zehner=randInt(2,9)*10, einer=randInt(1,9);
+  const b=zehner+einer, res=a*b;
+  return mkZahl({ lernziel:"Verteilungsgesetz anwenden",
+    frage:"Rechne mit dem Verteilungsgesetz:<br><span class='gross num'>"+a+" · "+b+"</span> = ?",
+    wert:res, hinweis:"Zerlege "+b+" in "+zehner+" + "+einer+" und multipliziere beide Teile mit "+a+".",
+    loesung:a+" · "+b+" = ("+a+" · "+zehner+") + ("+a+" · "+einer+") = "+(a*zehner)+" + "+(a*einer)+" = <strong>"+res+"</strong>." });
+}
+
+/* --- 5.7 Grössen & Umwandeln --- */
+const UMWANDEL=[
+  {von:"cm",zu:"m",f:0.01,gen:()=>randInt(5,90)*5},
+  {von:"m",zu:"km",f:0.001,gen:()=>randInt(2,40)*25},
+  {von:"kg",zu:"g",f:1000,gen:()=>randInt(1,9)+"."+randInt(0,9)*1},
+  {von:"g",zu:"kg",f:0.001,gen:()=>randInt(1,9)*100},
+  {von:"l",zu:"dl",f:10,gen:()=>r(randInt(1,20)/2)},
+  {von:"l",zu:"ml",f:1000,gen:()=>r(randInt(1,9)/2)},
+  {von:"min",zu:"s",f:60,gen:()=>randInt(2,10)},
+  {von:"Fr.",zu:"Rp.",f:100,gen:()=>r(randInt(1,9)+randInt(1,19)*5/100)},
+  {von:"dl",zu:"l",f:0.1,gen:()=>randInt(2,90)}
+];
+function g57_umwandeln(stufe){
+  const u=choice(UMWANDEL);
+  let v=u.gen(); v=parseFloat(v);
+  const res=r(v*u.f);
+  return mkZahl({ lernziel:"Grössen umwandeln",
+    frage:"Wandle um:<br><span class='gross num'>"+fmt(v)+" "+u.von+"</span> = ? "+u.zu,
+    wert:res, einheit:u.zu,
+    hinweis:"1 "+u.von+" = "+fmt(u.f)+" "+u.zu+".",
+    loesung:fmt(v)+" "+u.von+" = <strong>"+fmt(res)+" "+u.zu+"</strong>" });
+}
+function g57_begriff(stufe){
+  const paare=[["das Doppelte","mit 2 multiplizieren"],["das Dreifache","mit 3 multiplizieren"],
+    ["das Vierfache","mit 4 multiplizieren"],["halbieren","durch 2 teilen"],
+    ["das Sechsfache","mit 6 multiplizieren"],["verdoppeln","mit 2 multiplizieren"]];
+  const p=choice(paare);
+  const falsch=shuffle(paare.filter(x=>x[1]!==p[1])).slice(0,3).map(x=>x[1]);
+  const opts=shuffle([p[1], ...falsch]);
+  return mkMC({ lernziel:"Rechenbegriffe verstehen",
+    frage:"Was bedeutet <strong>"+p[0]+"</strong>?",
+    optionen:opts, richtig:opts.indexOf(p[1]),
+    hinweis:"Überlege, ob die Zahl grösser (mal) oder kleiner (teilen) wird.",
+    loesung:"<strong>"+p[0]+"</strong> heisst «"+p[1]+"»." });
+}
+function g57_bruchGroesse(stufe){
+  const paare=[["kg","g",1000],["m","cm",100],["l","ml",1000],["km","m",1000],["h","min",60]];
+  const p=choice(paare); const d=choice([2,4,5,8,10]); const ganz=(stufe==="profi")?randInt(1,3):1;
+  const basisKlein=ganz*p[2];
+  if(basisKlein % d !== 0){ return g57_bruchGroesse(stufe); }
+  const res=basisKlein/d;
+  return mkZahl({ lernziel:"Bruchteil einer Grösse berechnen",
+    frage:"Berechne: "+F(1,d)+" von <strong>"+ganz+" "+p[0]+"</strong> = ? "+p[1],
+    wert:res, einheit:p[1],
+    hinweis:"Wandle "+ganz+" "+p[0]+" zuerst in "+p[1]+" um ("+basisKlein+" "+p[1]+") und teile durch "+d+".",
+    loesung:ganz+" "+p[0]+" = "+basisKlein+" "+p[1]+"; "+basisKlein+" : "+d+" = <strong>"+res+" "+p[1]+"</strong>." });
+}
+function g57_pfeilschema(stufe){
+  const op1=choice(["verdoppelst","halbierst"]);
+  const teiler=choice([2,4,5]);
+  let ziel, gesucht;
+  if(op1==="verdoppelst"){ gesucht=randInt(4,30)*teiler; ziel=r(gesucht*2/teiler); 
+    return mkZahl({ lernziel:"Zahlenrätsel / Pfeilschema",
+      frage:"Wenn du die gesuchte Zahl <strong>verdoppelst</strong> und dann durch <strong>"+teiler+"</strong> teilst, erhältst du <strong>"+fmt(ziel)+"</strong>. Wie heisst die Zahl?",
+      wert:gesucht, hinweis:"Rechne rückwärts: erst mal "+teiler+", dann : 2.",
+      loesung:fmt(ziel)+" · "+teiler+" = "+fmt(ziel*teiler)+"; "+fmt(ziel*teiler)+" : 2 = <strong>"+gesucht+"</strong>." });
+  } else {
+    gesucht=randInt(4,30)*2; const add=randInt(10,50); ziel=r(gesucht/2+add);
+    return mkZahl({ lernziel:"Zahlenrätsel / Pfeilschema",
+      frage:"Wenn du die gesuchte Zahl <strong>halbierst</strong> und dann <strong>"+add+"</strong> addierst, erhältst du <strong>"+fmt(ziel)+"</strong>. Wie heisst die Zahl?",
+      wert:gesucht, hinweis:"Rechne rückwärts: erst − "+add+", dann · 2.",
+      loesung:fmt(ziel)+" − "+add+" = "+fmt(ziel-add)+"; "+fmt(ziel-add)+" · 2 = <strong>"+gesucht+"</strong>." });
+  }
+}
+
+/* --- 5.8 Brüche ordnen & Runden --- */
+function g58_bruchVergleich(stufe){
+  let z1,n1,z2,n2;
+  do{ n1=choice([2,3,4,5,6,8,10]); z1=randInt(1,n1); n2=choice([2,3,4,5,6,8,10]); z2=randInt(1,n2); }
+  while(false);
+  const w1=z1/n1, w2=z2/n2;
+  const zeichen = w1<w2?"<":(Math.abs(w1-w2)<1e-9?"=":">");
+  return mkVergleich("Vergleiche: "+F(z1,n1)+" &nbsp;?&nbsp; "+F(z2,n2), zeichen,
+    { lernziel:"Brüche vergleichen",
+      hinweis:"Rechne beide Brüche in Dezimalzahlen um oder bringe sie auf denselben Nenner.",
+      loesung:F(z1,n1)+" = "+fmt(r(w1,4))+" und "+F(z2,n2)+" = "+fmt(r(w2,4))+" → <strong>"+F(z1,n1)+" "+zeichen+" "+F(z2,n2)+"</strong>." });
+}
+function g58_bruchAddSub(stufe){
+  const n=choice([4,5,6,8,10,12]); const op=choice(["+","−"]);
+  let a=randInt(1,n-1), b=randInt(1,n-1);
+  if(op==="−" && b>a){ [a,b]=[b,a]; }
+  const z = op==="+"? a+b : a-b;
+  return mkBruch({ lernziel:"Brüche mit gleichem Nenner addieren/subtrahieren",
+    frage:"Rechne aus: "+F(a,n)+" "+op+" "+F(b,n)+" = ?  <span class='hinweistext'>(als Bruch, z. B. 3/4)</span>",
+    z:z, n:n,
+    hinweis:"Bei gleichem Nenner rechnest du nur mit den Zählern; der Nenner bleibt "+n+".",
+    loesung:"Zähler: "+a+" "+op+" "+b+" = "+z+", Nenner bleibt "+n+" → <strong>"+F(z,n)+"</strong>." });
+}
+function g58_runden(stufe){
+  const stellen=[["Zehner",10],["Hunderter",100],["Tausender",1000]];
+  const s=stufe==="basis"?stellen[0]:choice(stellen);
+  const zahl=randInt(s[1], s[1]*99) + randInt(1,s[1]-1);
+  const res=Math.round(zahl/s[1])*s[1];
+  return mkZahl({ lernziel:"Zahlen runden",
+    frage:"Runde auf <strong>"+s[0]+"</strong>:<br><span class='gross num'>"+fmt(zahl)+"</span>",
+    wert:res, hinweis:"Schau die Ziffer rechts der Rundungsstelle an: 0–4 abrunden, 5–9 aufrunden.",
+    loesung:fmt(zahl)+" gerundet auf "+s[0]+" = <strong>"+fmt(res)+"</strong>." });
+}
+function g58_teilbar(stufe){
+  const teiler=choice([2,3,4,5,6,8,9]);
+  const teilbar=Math.random()<0.5;
+  let zahl;
+  if(teilbar){ zahl=teiler*randInt(20,120); }
+  else { do{ zahl=randInt(100,999); } while(zahl%teiler===0); }
+  const opts=["Ja, teilbar","Nein, nicht teilbar"];
+  return mkMC({ lernziel:"Teilbarkeit prüfen",
+    frage:"Ist die Zahl <strong>"+zahl+"</strong> durch <strong>"+teiler+"</strong> teilbar?",
+    optionen:opts, richtig: (zahl%teiler===0)?0:1,
+    hinweis:"Zerlege die Zahl in Teile, die du gut durch "+teiler+" teilen kannst.",
+    loesung:zahl+" : "+teiler+" = "+ (zahl%teiler===0? fmt(zahl/teiler)+" (Rest 0) → teilbar" : fmt(Math.floor(zahl/teiler))+" Rest "+(zahl%teiler)+" → nicht teilbar")+"." });
+}
+function g58_divBruch(stufe){
+  let a=randInt(1,9), b=randInt(2,9);
+  return mkBruch({ lernziel:"Division als Bruch schreiben",
+    frage:"Schreibe als Bruch:  <span class='gross num'>"+a+" : "+b+"</span> = ?",
+    z:a, n:b,
+    hinweis:"Die erste Zahl kommt in den Zähler, die zweite in den Nenner.",
+    loesung:a+" : "+b+" = <strong>"+F(a,b)+"</strong>." });
+}
+function g58_gemischt(stufe){
+  const ganz=randInt(1,4), n=choice([2,3,4,5,8]), z=randInt(1,n-1);
+  const unecht=ganz*n+z;
+  return mkBruch({ lernziel:"Gemischte Zahl in Bruch umwandeln",
+    frage:"Wandle in einen Bruch um:  <span class='gross num'>"+ganz+" "+F(z,n)+"</span>",
+    z:unecht, n:n,
+    hinweis:"Ganze mal Nenner, dann Zähler dazu: "+ganz+" · "+n+" + "+z+".",
+    loesung:ganz+" · "+n+" + "+z+" = "+unecht+" → <strong>"+F(unecht,n)+"</strong>." });
+}
+function g58_ordnenDez(stufe){
+  const anzahl = stufe==="basis"?3:4;
+  const set=new Set();
+  while(set.size<anzahl){ set.add(r(randInt(5,95)/10)); }
+  const werte=Array.from(set);
+  return mkOrder({ lernziel:"Dezimalzahlen ordnen", werte:werte,
+    frage:"Ordne die Zahlen der Grösse nach – klicke sie von der <strong>kleinsten</strong> zur <strong>grössten</strong>:",
+    hinweis:"Vergleiche zuerst die Zahl vor dem Punkt, dann die Zehntel.",
+    loesung:"Richtige Reihenfolge: "+werte.slice().sort((a,b)=>a-b).map(fmt).join(" &lt; ")+"." });
+}
+
+/* --- 5.9 Dezimalrechnen & Gleichungen --- */
+function g59_klammer(stufe){
+  const a=randInt(2,9), b=randInt(2,9), c=randInt(2,9);
+  const op=choice(["·","+"]);
+  let res, frage;
+  if(op==="·"){ res=a+b*c; frage=a+" + ("+b+" · "+c+")"; }
+  else { res=a*(b+c); frage=a+" · ("+b+" + "+c+")"; }
+  return mkZahl({ lernziel:"Klammern und Punkt vor Strich",
+    frage:"Rechne aus:<br><span class='gross num'>"+frage+"</span> = ?",
+    wert:res, hinweis:"Zuerst die Klammer, dann den Rest.",
+    loesung:frage+" = <strong>"+res+"</strong>." });
+}
+function g59_fehlendeZahl(stufe){
+  const a=randInt(2,9), x=randInt(2,12), b=randInt(2,20);
+  const res=b+a*x;
+  return mkZahl({ lernziel:"Fehlende Zahl in Gleichung",
+    frage:"Welche Zahl gehört in die Lücke?<br><span class='gross num'>"+b+" + ("+a+" · ▢) = "+res+"</span>",
+    wert:x, hinweis:"Rechne rückwärts: "+res+" − "+b+", dann : "+a+".",
+    loesung:res+" − "+b+" = "+(res-b)+"; "+(res-b)+" : "+a+" = <strong>"+x+"</strong>." });
+}
+function g59_dezMal10(stufe){ return g53_mal10(stufe); }
+function g59_prop(stufe){
+  const proEinheit=r(randInt(30,90)/10);
+  const a=randInt(3,6), b=choice([2,3,4,5].filter(x=>x!==a));
+  const gesWert=r(a*proEinheit), res=r(b*proEinheit);
+  const dinge=choice([["Liter Most","Fr."],["kg Äpfel","Fr."],["Meter Stoff","Fr."]]);
+  return mkZahl({ lernziel:"Direkte Proportionalität",
+    frage:a+" "+dinge[0]+" kosten <strong>"+fmt(gesWert)+" "+dinge[1]+"</strong>. Wie viel kosten "+b+" "+dinge[0]+"?",
+    wert:res, einheit:dinge[1],
+    hinweis:"Berechne zuerst den Preis für 1 "+dinge[0].replace(/^(\S+)\s.*/,"$1")+".",
+    loesung:"1 → "+fmt(gesWert)+" : "+a+" = "+fmt(proEinheit)+"; "+b+" · "+fmt(proEinheit)+" = <strong>"+fmt(res)+" "+dinge[1]+"</strong>." });
+}
+
+/* --- 5.11 Mittelwert & Sachaufgaben --- */
+function g511_durchschnitt(stufe){
+  const n=stufe==="basis"?3:choice([3,4,5]);
+  let zahlen, summe;
+  do{ zahlen=[]; for(let i=0;i<n;i++) zahlen.push(randInt(2,40)); summe=zahlen.reduce((a,b)=>a+b,0); }
+  while(summe % n !== 0);
+  const res=summe/n;
+  return mkZahl({ lernziel:"Durchschnitt berechnen",
+    frage:"Berechne den Durchschnitt (Mittelwert) von:<br><span class='gross num'>"+zahlen.join(", ")+"</span>",
+    wert:res, hinweis:"Alle Zahlen zusammenzählen und durch ihre Anzahl ("+n+") teilen.",
+    loesung:"("+zahlen.join(" + ")+") = "+summe+"; "+summe+" : "+n+" = <strong>"+res+"</strong>." });
+}
+function g511_durchschnittFehlt(stufe){
+  const n=3, schnitt=randInt(50,200);
+  const summe=schnitt*(n+1);
+  const bekannt=[]; let teil=0;
+  for(let i=0;i<n;i++){ const v=randInt(schnitt-40,schnitt+40); bekannt.push(v); teil+=v; }
+  const fehlt=summe-teil;
+  if(fehlt<0) return g511_durchschnittFehlt(stufe);
+  return mkZahl({ lernziel:"Fehlenden Wert über den Durchschnitt finden",
+    frage:"Zusammen mit den Zahlen <strong>"+bekannt.join(", ")+"</strong> ergibt eine weitere Zahl den Durchschnitt <strong>"+schnitt+"</strong>. Wie heisst die gesuchte Zahl?",
+    wert:fehlt, hinweis:"Gesamtsumme = Durchschnitt · Anzahl. Ziehe dann die bekannten Zahlen ab.",
+    loesung:"Summe = "+schnitt+" · "+(n+1)+" = "+summe+"; "+summe+" − ("+bekannt.join(" + ")+") = <strong>"+fehlt+"</strong>." });
+}
+function g511_schriftAdd(stufe){
+  const n=stufe==="basis"?3:choice([4,5]);
+  const zahlen=[]; for(let i=0;i<n;i++) zahlen.push(randInt(100, stufe==="profi"?90000:900));
+  const res=zahlen.reduce((a,b)=>a+b,0);
+  return mkZahl({ lernziel:"Mehrere Zahlen addieren",
+    frage:"Addiere:<br><span class='gross num'>"+zahlen.map(fmt).join(" + ")+"</span> = ?",
+    wert:res, hinweis:"Schreibe die Zahlen stellengerecht untereinander und addiere von rechts nach links.",
+    loesung:"Summe = <strong>"+fmt(res)+"</strong>." });
+}
+
+/* ------------------------------------------------------------
+   c2) GENERATOREN 6. KLASSE
+   ------------------------------------------------------------ */
+
+/* --- 6.1 Brüche, Erweitern/Kürzen, ggT/kgV --- */
+function g61_anteil(stufe){ return g51_anteil(stufe); }
+function g61_ggT(stufe){
+  const g=randInt(2,12), a=g*randInt(2,6), b=g*randInt(2,6);
+  const res=ggT(a,b);
+  return mkZahl({ lernziel:"Grössten gemeinsamen Teiler (ggT)",
+    frage:"Bestimme den <strong>ggT</strong> von <span class='num'>"+a+"</span> und <span class='num'>"+b+"</span>.",
+    wert:res, hinweis:"Suche die grösste Zahl, durch die sich beide Zahlen ohne Rest teilen lassen.",
+    loesung:"Teiler von "+a+" und "+b+" gemeinsam – der grösste ist <strong>"+res+"</strong>." });
+}
+function g61_kgV(stufe){
+  const a=randInt(2,10), b=randInt(2,12);
+  const res=kgV(a,b);
+  return mkZahl({ lernziel:"Kleinstes gemeinsames Vielfaches (kgV)",
+    frage:"Bestimme das <strong>kgV</strong> von <span class='num'>"+a+"</span> und <span class='num'>"+b+"</span>.",
+    wert:res, hinweis:"Zähle die Vielfachen beider Zahlen auf und suche das erste gemeinsame.",
+    loesung:"Das kleinste gemeinsame Vielfache von "+a+" und "+b+" ist <strong>"+res+"</strong>." });
+}
+function g61_primzahl(stufe){
+  const primes=[2,3,5,7,11,13,17,19,23,29,31,37,41,43,47];
+  const nonprimes=[4,6,8,9,10,12,14,15,16,18,20,21,22,25,27,33,35,39,49];
+  const istPrim=Math.random()<0.5;
+  const zahl=istPrim?choice(primes):choice(nonprimes);
+  return mkMC({ lernziel:"Primzahlen erkennen",
+    frage:"Ist <strong>"+zahl+"</strong> eine Primzahl?",
+    optionen:["Ja","Nein"], richtig:istPrim?0:1,
+    hinweis:"Eine Primzahl ist nur durch 1 und durch sich selbst teilbar.",
+    loesung: istPrim ? zahl+" ist nur durch 1 und "+zahl+" teilbar → <strong>Primzahl</strong>." 
+                     : zahl+" hat weitere Teiler → <strong>keine Primzahl</strong>." });
+}
+function g61_erweitern(stufe){
+  const z=randInt(1,5), n=choice([3,4,5,6,8]);
+  const faktor=choice([2,3,4,5]);
+  const zielN=n*faktor, zielZ=z*faktor;
+  return mkZahl({ lernziel:"Brüche erweitern",
+    frage:"Erweitere den Bruch: "+F(z,n)+" = "+F("▢",zielN),
+    wert:zielZ, hinweis:"Nenner "+n+" wurde mit "+faktor+" multipliziert – mach dasselbe mit dem Zähler.",
+    loesung:"Nenner · "+faktor+"; also Zähler "+z+" · "+faktor+" = <strong>"+zielZ+"</strong>." });
+}
+function g61_kuerzen(stufe){
+  const g=randInt(2,9); const [zk,nk]=[randInt(1,6), randInt(2,7)];
+  let z=zk*g, n=nk*g;
+  if(z===n){ n+=g; }
+  const [rz,rn]=kuerze(z,n);
+  return mkBruch({ lernziel:"Brüche vollständig kürzen",
+    frage:"Kürze so weit wie möglich: "+F(z,n)+" = ?  <span class='hinweistext'>(als Bruch)</span>",
+    z:rz, n:rn, gekuerzt:true,
+    hinweis:"Teile Zähler und Nenner durch ihren grössten gemeinsamen Teiler.",
+    loesung:"ggT("+z+", "+n+") = "+ggT(z,n)+"; "+F(z,n)+" = <strong>"+F(rz,rn)+"</strong>." });
+}
+function g61_gleichwertig(stufe){
+  const z=randInt(1,4), n=choice([2,3,4,5]);
+  const f=choice([2,3,4]);
+  const richtig=[z*f, n*f];
+  const opts=shuffle([ {z:richtig[0],n:richtig[1],ok:true}, {z:z*f, n:n*f+1}, {z:z*f+1, n:n*f}, {z:z+f, n:n+f} ]);
+  return mkMC({ lernziel:"Gleichwertige Brüche finden",
+    frage:"Welcher Bruch ist gleichwertig zu "+F(z,n)+"?",
+    optionen:opts.map(o=>F(o.z,o.n)), richtig:opts.findIndex(o=>o.ok),
+    hinweis:"Bei gleichwertigen Brüchen werden Zähler und Nenner mit derselben Zahl multipliziert.",
+    loesung:F(z,n)+" · "+F(f,f)+" = <strong>"+F(z*f,n*f)+"</strong>." });
+}
+
+/* --- 6.3 Dezimalzahlen ordnen & Brüche --- */
+function g63_zahlenstrahl(stufe){
+  const bereiche=[[0,1,10],[7,8,10],[120,130,10],[2.88,2.98,10]];
+  const b=choice(bereiche);
+  const [min,max,teil]=b;
+  const idx=randInt(1,teil-1);
+  const wert=r(min+(max-min)*idx/teil);
+  return mkZahl({ lernziel:"Dezimalzahlen am Zahlenstrahl ablesen",
+    frage:"Welche Zahl markiert der Pfeil?<br>"+zahlenstrahlSVG(min,max,wert,teil),
+    wert:wert, hinweis:"Zähle, in wie viele gleiche Teile der Abschnitt geteilt ist.",
+    loesung:"Der Abschnitt von "+fmt(min)+" bis "+fmt(max)+" ist in "+teil+" Teile geteilt. Der Pfeil steht bei <strong>"+fmt(wert)+"</strong>." });
+}
+function g63_nachbar(stufe){
+  const typen=[["Zehntel",0.1,1],["Hundertstel",0.01,2],["Zehner",10,0],["Hunderter",100,0]];
+  const t=choice(typen);
+  let zahl;
+  if(t[2]>0){ zahl=r(randInt(10,990)/Math.pow(10,t[2])); }
+  else { zahl=randInt(1,50)*t[1] + randInt(1,t[1]-1); }
+  const unten=Math.floor(zahl/t[1])*t[1];
+  const oben=r(unten+t[1]);
+  return mkMulti({ lernziel:"Nachbarzahlen bestimmen",
+    frage:"Bestimme die beiden Nachbar-<strong>"+t[0]+"</strong> von <span class='num gross'>"+fmt(zahl)+"</span>:"
+      +"<div class='folge' style='margin-top:10px'>{{0}} &nbsp;&lt;&nbsp; "+fmt(zahl)+" &nbsp;&lt;&nbsp; {{1}}</div>",
+    felder:[{check:{art:"zahl",wert:r(unten)}},{check:{art:"zahl",wert:oben}}],
+    hinweis:"Der kleinere Nachbar liegt direkt darunter, der grössere direkt darüber (Abstand "+fmt(t[1])+").",
+    loesung:"Nachbar-"+t[0]+": <strong>"+fmt(r(unten))+"</strong> und <strong>"+fmt(oben)+"</strong>." });
+}
+function g63_mal10(stufe){ return g53_mal10(stufe); }
+function g63_dezToBruch(stufe){
+  const optionen=[[0.6,3,5],[0.08,2,25],[0.36,9,25],[0.25,1,4],[0.5,1,2],[0.12,3,25],[0.75,3,4],[0.24,6,25],[0.3,3,10]];
+  const o=choice(optionen);
+  return mkBruch({ lernziel:"Dezimalzahl in gekürzten Bruch",
+    frage:"Schreibe als gekürzten Bruch:  <span class='gross num'>"+fmt(o[0])+"</span> = ?",
+    z:o[1], n:o[2], gekuerzt:true,
+    hinweis:"Schreibe zuerst als Zehntel/Hundertstel und kürze dann.",
+    loesung:fmt(o[0])+" = "+F(Math.round(o[0]*100),100)+" = <strong>"+F(o[1],o[2])+"</strong>." });
+}
+function g63_bruchToDez(stufe){
+  const optionen=[[1,2,0.5],[3,5,0.6],[1,5,0.2],[1,4,0.25],[3,4,0.75],[1,8,0.125],[1,20,0.05],[3,20,0.15],[7,5,1.4]];
+  const o=choice(optionen);
+  return mkZahl({ lernziel:"Bruch in Dezimalzahl",
+    frage:"Schreibe als Dezimalzahl:  <span class='gross'>"+F(o[0],o[1])+"</span> = ?",
+    wert:o[2], hinweis:"Erweitere den Bruch so, dass der Nenner 10, 100 oder 1000 wird.",
+    loesung:F(o[0],o[1])+" = <strong>"+fmt(o[2])+"</strong>." });
+}
+function g63_bruchVergleich(stufe){ return g58_bruchVergleich(stufe); }
+
+/* --- 6.4 Proportionalität & Geschwindigkeit --- */
+function g64_prop(stufe){
+  const proEinheit=r(randInt(20,80)/10);
+  const a=randInt(4,9), b=choice([3,5,6,7].filter(x=>x!==a));
+  const gesWert=r(a*proEinheit), res=r(b*proEinheit);
+  const dinge=choice([["Birnen","Schnitze",6],["kg Bananen","Fr.",0]]);
+  return mkZahl({ lernziel:"Proportionalität lösen",
+    frage:"Aus <strong>"+a+" "+dinge[0]+"</strong> erhält man <strong>"+fmt(gesWert)+" "+dinge[1]+"</strong>. Wie viel bei "+b+" "+dinge[0]+"?",
+    wert:res, einheit:dinge[1],
+    hinweis:"Erst der Wert für 1, dann mal "+b+".",
+    loesung:"1 → "+fmt(gesWert)+" : "+a+" = "+fmt(proEinheit)+"; "+b+" · "+fmt(proEinheit)+" = <strong>"+fmt(res)+"</strong>." });
+}
+function g64_kmh(stufe){
+  const faelle=[
+    ()=>{ const km=r(randInt(6,20)/10); const min=choice([5,6,10]); return {strecke:km+" km", zeit:min+" min", kmh:r(km/(min/60))}; },
+    ()=>{ const m=choice([400,600,900,1000]); const s=choice([20,30,40,60]); return {strecke:m+" m", zeit:s+" s", kmh:r((m/1000)/(s/3600))}; }
+  ];
+  const fall=choice(faelle)();
+  return mkZahl({ lernziel:"Geschwindigkeit in km/h berechnen",
+    frage:"Ein Fahrzeug fährt <strong>"+fall.strecke+"</strong> in <strong>"+fall.zeit+"</strong>. Wie schnell ist es in km/h?",
+    wert:fall.kmh, einheit:"km/h",
+    hinweis:"Rechne aus, wie weit es in einer Stunde käme (60 min bzw. 3600 s).",
+    loesung:"In 1 Stunde: <strong>"+fmt(fall.kmh)+" km/h</strong>." });
+}
+function g64_umgekehrt(stufe){
+  const paare=[
+    ["4 Glühbirnen kosten 14.60 Fr. Halb so viele Glühbirnen kosten … so viel.","halb"],
+    ["Eine Wand ist 6 m hoch. Für eine 3 m hohe Wand braucht man … so viel Zeit.","halb"],
+    ["Trinken zwei Kinder halb so viel pro Tag, hält der Vorrat … so lange.","doppelt"],
+    ["Ein Velofahrer fährt dreimal langsamer. Er braucht … so lange.","dreimal"]
+  ];
+  const p=choice(paare);
+  const opts=shuffle(["halb","doppelt","dreimal","gleich viel"]);
+  return mkMC({ lernziel:"Proportional / umgekehrt proportional erkennen",
+    frage:p[0], optionen:opts, richtig:opts.indexOf(p[1]),
+    hinweis:"Überlege: Wird das Eine kleiner, wird das Andere grösser (umgekehrt) oder auch kleiner (proportional)?",
+    loesung:"Richtig ist «"+p[1]+"»." });
+}
+
+/* --- 6.5 Dezimalrechnen & Überschlagen --- */
+function g65_dezAddSub(stufe){ return g53_dezAddSub(stufe==="basis"?"standard":stufe); }
+function g65_dezMal(stufe){
+  const a=randInt(2,12);
+  const b=r(randInt(11,999)/(stufe==="profi"?1000:100));
+  const res=r(a*b);
+  return mkZahl({ lernziel:"Dezimalzahl multiplizieren",
+    frage:"Rechne aus:<br><span class='gross num'>"+a+" · "+fmt(b)+"</span> = ?",
+    wert:res, hinweis:"Rechne ohne Punkt und setze den Punkt am Schluss richtig (gleich viele Stellen wie im Faktor).",
+    loesung:a+" · "+fmt(b)+" = <strong>"+fmt(res)+"</strong>." });
+}
+function g65_dezDurch(stufe){
+  const b=randInt(2,9);
+  const res=r(randInt(11,120)/10);
+  const a=r(res*b);
+  return mkZahl({ lernziel:"Dezimalzahl dividieren",
+    frage:"Rechne aus:<br><span class='gross num'>"+fmt(a)+" : "+b+"</span> = ?",
+    wert:res, hinweis:"Teile wie gewohnt und achte auf den Dezimalpunkt im Ergebnis.",
+    loesung:fmt(a)+" : "+b+" = <strong>"+fmt(res)+"</strong>." });
+}
+function g65_zehnerMal(stufe){
+  const zehner=choice([30,40,50,60,70,300,400,500]);
+  const dez=r(choice([0.1,0.2,0.25,1.2,0.05,0.44,2.5])*1);
+  const res=r(zehner*dez);
+  return mkZahl({ lernziel:"Mit Zehner-/Hunderterzahlen · Dezimalzahl",
+    frage:"Rechne aus:<br><span class='gross num'>"+zehner+" · "+fmt(dez)+"</span> = ?",
+    wert:res, hinweis:"Rechne z. B. erst · die Anfangsziffer, dann · Zehner/Hunderter.",
+    loesung:zehner+" · "+fmt(dez)+" = <strong>"+fmt(res)+"</strong>." });
+}
+function g65_ueberschlag(stufe){
+  const a=randInt(20,90)*100+randInt(0,99);
+  const b=randInt(10,60)*100+randInt(0,99);
+  const summe=a+b;
+  const gerundet=Math.round(summe/1000)*1000;
+  const opts=shuffle([gerundet, gerundet+1000, gerundet-1000]);
+  return mkMC({ lernziel:"Ergebnis überschlagen",
+    frage:"Welches Ergebnis liegt am nächsten?<br><span class='gross num'>"+fmt(a)+" + "+fmt(b)+"</span>",
+    optionen:opts.map(fmt), richtig:opts.indexOf(gerundet),
+    hinweis:"Runde beide Zahlen grosszügig, bevor du zusammenzählst.",
+    loesung:"Gerundet ≈ "+fmt(Math.round(a/1000)*1000)+" + "+fmt(Math.round(b/1000)*1000)+" ≈ <strong>"+fmt(gerundet)+"</strong>." });
+}
+
+/* --- 6.7 Flächen & Volumen --- */
+function g67_flaeche(stufe){
+  const L=stufe==="profi"?r(randInt(20,150)/10):randInt(3,15);
+  const B=stufe==="profi"?r(randInt(20,90)/10):randInt(2,12);
+  const einh=choice(["m","cm","dm"]);
+  const res=r(L*B);
+  return mkZahl({ lernziel:"Fläche eines Rechtecks",
+    frage:"Ein Rechteck ist <strong>"+fmt(L)+" "+einh+"</strong> lang und <strong>"+fmt(B)+" "+einh+"</strong> breit. Wie gross ist die Fläche?",
+    wert:res, einheit:einh+"²",
+    hinweis:"Fläche = Länge · Breite.",
+    loesung:fmt(L)+" · "+fmt(B)+" = <strong>"+fmt(res)+" "+einh+"²</strong>." });
+}
+function g67_umfang(stufe){
+  const L=randInt(3,20), B=randInt(2,15); const einh=choice(["m","cm","mm"]);
+  const res=2*(L+B);
+  return mkZahl({ lernziel:"Umfang eines Rechtecks",
+    frage:"Ein Rechteck ist <strong>"+L+" "+einh+"</strong> lang und <strong>"+B+" "+einh+"</strong> breit. Wie gross ist der Umfang?",
+    wert:res, einheit:einh,
+    hinweis:"Umfang = 2 · (Länge + Breite).",
+    loesung:"2 · ("+L+" + "+B+") = <strong>"+res+" "+einh+"</strong>." });
+}
+function g67_flaechenUmwandeln(stufe){
+  const paare=[["cm²","mm²",100],["dm²","cm²",100],["m²","dm²",100]];
+  const rueck=Math.random()<0.5;
+  const p=choice(paare);
+  if(rueck){
+    const v=randInt(1,90)*100; const res=r(v/p[2]);
+    return mkZahl({ lernziel:"Flächenmasse umwandeln",
+      frage:"Wandle um:<br><span class='gross num'>"+fmt(v)+" "+p[1]+"</span> = ? "+p[0],
+      wert:res, einheit:p[0], hinweis:"Bei Flächen sind es 100er-Schritte.",
+      loesung:fmt(v)+" "+p[1]+" = <strong>"+fmt(res)+" "+p[0]+"</strong>." });
+  } else {
+    const v=r(randInt(1,50)); const res=r(v*p[2]);
+    return mkZahl({ lernziel:"Flächenmasse umwandeln",
+      frage:"Wandle um:<br><span class='gross num'>"+fmt(v)+" "+p[0]+"</span> = ? "+p[1],
+      wert:res, einheit:p[1], hinweis:"Bei Flächen sind es 100er-Schritte (1 "+p[0]+" = 100 "+p[1]+").",
+      loesung:fmt(v)+" "+p[0]+" = <strong>"+fmt(res)+" "+p[1]+"</strong>." });
+  }
+}
+function g67_volumen(stufe){
+  const a=randInt(2,10), b=randInt(2,10), c=randInt(2,10);
+  const res=a*b*c;
+  return mkZahl({ lernziel:"Volumen eines Quaders",
+    frage:"Ein Quader ist <strong>"+a+" cm</strong> · <strong>"+b+" cm</strong> · <strong>"+c+" cm</strong>. Wie gross ist sein Volumen?",
+    wert:res, einheit:"cm³",
+    hinweis:"Volumen = Länge · Breite · Höhe.",
+    loesung:a+" · "+b+" · "+c+" = <strong>"+res+" cm³</strong>." });
+}
+
+/* --- 6.8 Anteile, Prozente & Zahlen --- */
+function g68_anteil(stufe){ return g51_anteil(stufe); }
+function g68_ganze(stufe){
+  const d=choice([3,4,5,6,8]), teil=randInt(3,20);
+  const ganze=d*teil, anteil=teil; /* 1/d von ganze = teil */
+  return mkZahl({ lernziel:"Das Ganze aus einem Anteil berechnen",
+    frage:F(1,d)+" von ▢ = <strong>"+anteil+"</strong>. Wie heisst das Ganze (▢)?",
+    wert:ganze, hinweis:"Wenn "+F(1,d)+" gleich "+anteil+" ist, dann ist das Ganze "+anteil+" · "+d+".",
+    loesung:anteil+" · "+d+" = <strong>"+ganze+"</strong>." });
+}
+function g68_prozentWert(stufe){
+  const proz=choice([5,10,15,20,25,30,40,50,60,75,80]);
+  const basisMult=choice([20,40,50,60,80,100,200]);
+  const res=r(proz/100*basisMult);
+  return mkZahl({ lernziel:"Prozentwert berechnen",
+    frage:"Berechne:<br><span class='gross num'>"+proz+" % von "+fmt(basisMult)+"</span> = ?",
+    wert:res, hinweis:proz+" % bedeutet "+F(proz,100)+" des Ganzen.",
+    loesung:proz+" % von "+fmt(basisMult)+" = "+fmt(basisMult)+" : 100 · "+proz+" = <strong>"+fmt(res)+"</strong>." });
+}
+function g68_prozentForm(stufe){
+  const tab=[[25,"1/4",0.25],[50,"1/2",0.5],[75,"3/4",0.75],[20,"1/5",0.2],[10,"1/10",0.1],[40,"2/5",0.4]];
+  const t=choice(tab);
+  const zeigeDez=Math.random()<0.5;
+  if(zeigeDez){
+    const opts=shuffle([t[1], "1/"+(parseInt(t[1].split("/")[1])+1), t[1].split("/")[0]+"/"+(parseInt(t[1].split("/")[1])+2), (parseInt(t[1].split("/")[0])+1)+"/"+t[1].split("/")[1]]);
+    const bruchOpts=opts.map(s=>{const p=s.split("/");return F(p[0],p[1]);});
+    return mkMC({ lernziel:"Prozent als Bruch schreiben",
+      frage:"Welcher Bruch entspricht <strong>"+t[0]+" %</strong>?",
+      optionen:bruchOpts, richtig:opts.indexOf(t[1]),
+      hinweis:t[0]+" % = "+F(t[0],100)+" – jetzt kürzen.",
+      loesung:t[0]+" % = <strong>"+F(t[1].split("/")[0],t[1].split("/")[1])+"</strong>." });
+  } else {
+    const opts=shuffle([t[2], r(t[2]/10), r(t[2]*10), r(t[2]+0.1)]);
+    return mkMC({ lernziel:"Prozent als Dezimalzahl schreiben",
+      frage:"Welche Dezimalzahl entspricht <strong>"+t[0]+" %</strong>?",
+      optionen:opts.map(fmt), richtig:opts.indexOf(t[2]),
+      hinweis:"Prozent : 100 ergibt die Dezimalzahl.",
+      loesung:t[0]+" % = "+t[0]+" : 100 = <strong>"+fmt(t[2])+"</strong>." });
+  }
+}
+function g68_grosseZahl(stufe){
+  const faelle=[["3 Millionen",3000000],["45 Millionen",45000000],["1985 Millionen",1985000000],["4 Milliarden",4000000000],["12 Millionen",12000000]];
+  const f=choice(faelle);
+  return mkZahl({ lernziel:"Grosse Zahlen mit Ziffern schreiben",
+    frage:"Schreibe mit Ziffern:  <strong>"+f[0]+"</strong>",
+    wert:f[1], hinweis:"Eine Million hat 6 Nullen, eine Milliarde 9 Nullen.",
+    loesung:f[0]+" = <strong>"+fmt(f[1])+"</strong>." });
+}
+function g68_primfaktor(stufe){
+  const tab=[[60,"2 · 2 · 3 · 5"],[72,"2 · 2 · 2 · 3 · 3"],[36,"2 · 2 · 3 · 3"],[210,"2 · 3 · 5 · 7"],[80,"2 · 2 · 2 · 2 · 5"],[64,"2 · 2 · 2 · 2 · 2 · 2"]];
+  const t=choice(tab);
+  const andere=shuffle(tab.filter(x=>x[0]!==t[0])).slice(0,3).map(x=>x[1]);
+  const opts=shuffle([t[1], ...andere]);
+  return mkMC({ lernziel:"Primfaktorzerlegung",
+    frage:"Welches ist die Primfaktorzerlegung von <strong>"+t[0]+"</strong>?",
+    optionen:opts, richtig:opts.indexOf(t[1]),
+    hinweis:"Teile die Zahl immer wieder durch die kleinste passende Primzahl.",
+    loesung:t[0]+" = <strong>"+t[1]+"</strong>." });
+}
+function g68_bruchAddVersch(stufe){
+  const paare=[[1,3,1,5],[1,2,1,5],[1,3,1,4],[1,5,1,4],[2,3,1,6],[1,4,2,3]];
+  const p=choice(paare);
+  const n=kgV(p[1],p[3]);
+  const zz=p[0]*(n/p[1]) + p[2]*(n/p[3]);
+  return mkBruch({ lernziel:"Brüche mit verschiedenen Nennern addieren",
+    frage:"Rechne aus: "+F(p[0],p[1])+" + "+F(p[2],p[3])+" = ?  <span class='hinweistext'>(als Bruch)</span>",
+    z:zz, n:n,
+    hinweis:"Bringe beide Brüche zuerst auf den gemeinsamen Nenner "+n+".",
+    loesung:F(p[0],p[1])+" = "+F(p[0]*(n/p[1]),n)+" und "+F(p[2],p[3])+" = "+F(p[2]*(n/p[3]),n)+"; zusammen <strong>"+F(zz,n)+"</strong>." });
+}
+
+/* --- 6.9 Terme, Klammern & Gleichungen --- */
+function g69_punktStrich(stufe){
+  const a=randInt(3,9), b=randInt(2,9), c=randInt(10,40);
+  const op=choice(["+","−"]);
+  const res = op==="+" ? a*b+c : (a*b>c? a*b-c : c-a*b);
+  const links = op==="+" ? (a+" · "+b+" + "+c) : (a*b>c ? (a+" · "+b+" − "+c) : (c+" − "+a+" · "+b));
+  const wert = op==="+" ? a*b+c : (a*b>c? a*b-c : c-a*b);
+  return mkZahl({ lernziel:"Punkt vor Strich",
+    frage:"Rechne aus (Punkt vor Strich):<br><span class='gross num'>"+links+"</span> = ?",
+    wert:wert, hinweis:"Zuerst multiplizieren, dann addieren/subtrahieren.",
+    loesung:links+" = <strong>"+wert+"</strong>." });
+}
+function g69_klammer(stufe){
+  const a=randInt(2,6), b=randInt(2,9), c=randInt(2,9);
+  const res=a*(b+c);
+  return mkZahl({ lernziel:"Klammern zuerst rechnen",
+    frage:"Rechne aus:<br><span class='gross num'>"+a+" · ("+b+" + "+c+")</span> = ?",
+    wert:res, hinweis:"Zuerst die Klammer ausrechnen, dann multiplizieren.",
+    loesung:a+" · ("+b+" + "+c+") = "+a+" · "+(b+c)+" = <strong>"+res+"</strong>." });
+}
+function g69_operationszeichen(stufe){
+  /* a ? b ? c = ergebnis ; finde die zwei Operatoren (+ oder ·) */
+  const a=randInt(2,9), b=randInt(2,6), c=randInt(2,9);
+  const varianten=[
+    {ops:["+","·"], wert:a+b*c, txt:a+" + "+b+" · "+c},
+    {ops:["·","+"], wert:a*b+c, txt:a+" · "+b+" + "+c},
+    {ops:["·","·"], wert:a*b*c, txt:a+" · "+b+" · "+c},
+    {ops:["+","+"], wert:a+b+c, txt:a+" + "+b+" + "+c}
+  ];
+  const ziel=choice(varianten);
+  const opts=shuffle(varianten.map(v=>v.ops.join(" , ")));
+  return mkMC({ lernziel:"Passende Operationszeichen einsetzen",
+    frage:"Welche Zeichen ergeben <strong>"+ziel.wert+"</strong>?<br><span class='gross num'>"+a+" ▢ "+b+" ▢ "+c+" = "+ziel.wert+"</span>",
+    optionen:opts, richtig:opts.indexOf(ziel.ops.join(" , ")),
+    hinweis:"Denke an «Punkt vor Strich» und probiere die Varianten durch.",
+    loesung:ziel.txt+" = <strong>"+ziel.wert+"</strong>." });
+}
+function g69_umstellen(stufe){
+  const typ=choice(["minus","plus","mal","geteilt"]);
+  let frage, wert, loes;
+  if(typ==="minus"){ const g=randInt(200,500), rst=randInt(50,150); wert=g-rst;
+    frage=g+" − ▢ = "+rst; loes=g+" − "+rst+" = "+wert; }
+  else if(typ==="plus"){ const s=randInt(300,600), t=randInt(50,200); wert=s-t;
+    frage="▢ + "+t+" = "+s; loes=s+" − "+t+" = "+wert; }
+  else if(typ==="mal"){ const f=randInt(3,9), p=f*randInt(20,80); wert=p/f;
+    frage=f+" · ▢ = "+p; loes=p+" : "+f+" = "+wert; }
+  else { const d=randInt(3,9), e=randInt(10,60); wert=d*e;
+    frage="▢ : "+d+" = "+e; loes=e+" · "+d+" = "+wert; }
+  return mkZahl({ lernziel:"Gleichung umstellen",
+    frage:"Berechne die gesuchte Zahl (▢):<br><span class='gross num'>"+frage+"</span>",
+    wert:wert, hinweis:"Nutze die Umkehroperation.",
+    loesung:loes+" → <strong>"+fmt(wert)+"</strong>." });
+}
+function g69_durchschnitt(stufe){ return g511_durchschnitt(stufe); }
+
+/* --- 6.11 Kombinatorik & Wahrscheinlichkeit --- */
+function fakultaet(n){ let p=1; for(let i=2;i<=n;i++) p*=i; return p; }
+function g611_permutation(stufe){
+  const n=stufe==="basis"?3:choice([3,4]);
+  const woerter={3:"HUT",4:"HAUS"};
+  const res=fakultaet(n);
+  return mkZahl({ lernziel:"Alle Anordnungen bestimmen",
+    frage:"Wie viele verschiedene Reihenfolgen kann man mit den <strong>"+n+"</strong> verschiedenen Buchstaben von «"+woerter[n]+"» bilden?",
+    wert:res, hinweis:"Für den 1. Platz gibt es "+n+" Möglichkeiten, dann "+(n-1)+", dann "+(n-2)+" …",
+    loesung:Array.from({length:n},(_,i)=>n-i).join(" · ")+" = <strong>"+res+"</strong>." });
+}
+function g611_medaillen(stufe){
+  const n=choice([4,5,6]); const k=3;
+  let res=1; for(let i=0;i<k;i++) res*=(n-i);
+  return mkZahl({ lernziel:"Geordnete Auswahl (Medaillen)",
+    frage:n+" Athletinnen kämpfen um <strong>Gold, Silber und Bronze</strong>. Wie viele verschiedene Verteilungen gibt es?",
+    wert:res, hinweis:"Gold: "+n+" Möglichkeiten, Silber: "+(n-1)+", Bronze: "+(n-2)+".",
+    loesung:n+" · "+(n-1)+" · "+(n-2)+" = <strong>"+res+"</strong>." });
+}
+function g611_kombi(stufe){
+  const a=randInt(2,4), b=randInt(2,3), c=randInt(2,4);
+  const res=a*b*c;
+  return mkZahl({ lernziel:"Kombinationen zählen",
+    frage:"Samira hat <strong>"+a+" Hüte</strong>, <strong>"+b+" Jacken</strong> und <strong>"+c+" Paar Schuhe</strong>. Wie viele verschiedene Kombinationen kann sie tragen?",
+    wert:res, hinweis:"Multipliziere die Anzahl der Möglichkeiten für jedes Kleidungsstück.",
+    loesung:a+" · "+b+" · "+c+" = <strong>"+res+"</strong>." });
+}
+function g611_wahrsch(stufe){
+  const faelle=[
+    ["In einer Garage stehen 2 rote, 1 blaues und 1 gelbes Velo. Welche Farbe zieht man am ehesten zufällig?","rot",["rot","blau","gelb"]],
+    ["Ein Würfel wird geworfen. Was ist wahrscheinlicher: eine gerade Zahl oder eine 6?","eine gerade Zahl",["eine 6","eine gerade Zahl","gleich wahrscheinlich"]],
+    ["In einem Sack sind 8 blaue und 2 rote Kugeln. Welche Farbe zieht man eher?","blau",["blau","rot","gleich wahrscheinlich"]]
+  ];
+  const f=choice(faelle);
+  const opts=shuffle(f[2]);
+  return mkMC({ lernziel:"Wahrscheinlichkeit einschätzen",
+    frage:f[0], optionen:opts, richtig:opts.indexOf(f[1]),
+    hinweis:"Was es mehr gibt oder was öfter vorkommt, ist wahrscheinlicher.",
+    loesung:"Richtig: <strong>"+f[1]+"</strong>." });
+}
+
+/* ------------------------------------------------------------
+   c3) THEMEN-KATALOG (Metadaten + Generatoren)
+   ------------------------------------------------------------ */
+const THEMEN = [
+  /* ===== 5. KLASSE ===== */
+  { id:"5.1", klasse:"5", nr:"5.1", titel:"Brüche & Anteile", icon:"🍕", stufeMin:"basis",
+    beschr:"Bruchteile benennen und Anteile von Zahlen bestimmen.",
+    lernziele:["Anteil einer Menge oder Zahl bestimmen","Brüche benennen (Zähler & Nenner)"],
+    gens:[g51_anteil, g51_sach, g51_benennen] },
+  { id:"5.3", klasse:"5", nr:"5.3", titel:"Dezimalzahlen & Stellenwert", icon:"🔢",
+    beschr:"Stellenwerte, mit 10/100/1000 rechnen, addieren, Zahlenfolgen.",
+    lernziele:["Zehntel, Hundertstel, Tausendstel benennen","Mit 10, 100, 1000 multiplizieren/dividieren","Dezimalzahlen addieren & subtrahieren","In gleichen Schritten zählen"],
+    gens:[g53_stellenwert, g53_mal10, g53_dezAddSub, g53_folge] },
+  { id:"5.4", klasse:"5", nr:"5.4", titel:"Proportionalität & Wertetabellen", icon:"⚖️",
+    beschr:"Proportionale Sätze ergänzen und Wertetabellen füllen.",
+    lernziele:["Proportionale Sätze ergänzen","Wertetabellen ergänzen (Wert für 1 finden)"],
+    gens:[g54_satz, g54_tabelle] },
+  { id:"5.5", klasse:"5", nr:"5.5", titel:"Rechnen & flexibel rechnen", icon:"➗",
+    beschr:"Kopfrechnen, Zehnerzahlen, Verteilungsgesetz.",
+    lernziele:["Im Kopf addieren & subtrahieren","Mit Zehner-/Hunderterzahlen · und :","Verteilungsgesetz anwenden"],
+    gens:[g55_kopf, g55_malzehner, g55_durchzehner, g55_verteilung] },
+  { id:"5.7", klasse:"5", nr:"5.7", titel:"Grössen & Umwandeln", icon:"📏",
+    beschr:"Grössen umwandeln, Bruchteile von Grössen, Rechenbegriffe, Zahlenrätsel.",
+    lernziele:["Grössen umwandeln","Bruchteil einer Grösse berechnen","Rechenbegriffe kennen","Pfeilschema / Zahlenrätsel lösen"],
+    gens:[g57_umwandeln, g57_bruchGroesse, g57_begriff, g57_pfeilschema] },
+  { id:"5.8", klasse:"5", nr:"5.8", titel:"Brüche ordnen & Runden", icon:"📊",
+    beschr:"Brüche vergleichen & rechnen, runden, Teilbarkeit prüfen.",
+    lernziele:["Brüche vergleichen","Brüche mit gleichem Nenner +/−","Zahlen runden","Teilbarkeit prüfen","Division als Bruch, gemischte Zahlen"],
+    gens:[g58_bruchVergleich, g58_bruchAddSub, g58_runden, g58_teilbar, g58_divBruch, g58_gemischt, g58_ordnenDez] },
+  { id:"5.9", klasse:"5", nr:"5.9", titel:"Dezimalrechnen & Gleichungen", icon:"🟰",
+    beschr:"Klammern, fehlende Zahlen, Proportionalität mit Dezimalzahlen.",
+    lernziele:["Klammern & Punkt vor Strich","Fehlende Zahl in Gleichung finden","Mit 10/100/1000 rechnen","Direkte Proportionalität"],
+    gens:[g59_klammer, g59_fehlendeZahl, g59_dezMal10, g59_prop] },
+  { id:"5.11", klasse:"5", nr:"5.11", titel:"Mittelwert & Sachaufgaben", icon:"📈",
+    beschr:"Durchschnitt berechnen und fehlende Werte finden.",
+    lernziele:["Durchschnitt berechnen","Fehlenden Wert über den Durchschnitt finden","Mehrere Zahlen addieren"],
+    gens:[g511_durchschnitt, g511_durchschnittFehlt, g511_schriftAdd] },
+
+  /* ===== 6. KLASSE ===== */
+  { id:"6.1", klasse:"6", nr:"6.1", titel:"Erweitern, Kürzen, ggT & kgV", icon:"🍰",
+    beschr:"Anteile, ggT/kgV, Primzahlen, erweitern & kürzen.",
+    lernziele:["Anteil bestimmen","ggT und kgV finden","Primzahlen erkennen","Brüche erweitern & kürzen","Gleichwertige Brüche"],
+    gens:[g61_anteil, g61_ggT, g61_kgV, g61_primzahl, g61_erweitern, g61_kuerzen, g61_gleichwertig] },
+  { id:"6.3", klasse:"6", nr:"6.3", titel:"Dezimalzahlen ordnen & Brüche", icon:"🔢",
+    beschr:"Zahlenstrahl, Nachbarzahlen, Brüche ↔ Dezimalzahlen.",
+    lernziele:["Am Zahlenstrahl ablesen","Nachbarzahlen bestimmen","Mit 10/100/1000 rechnen","Brüche ↔ Dezimalzahlen","Brüche vergleichen"],
+    gens:[g63_zahlenstrahl, g63_nachbar, g63_mal10, g63_dezToBruch, g63_bruchToDez, g63_bruchVergleich] },
+  { id:"6.4", klasse:"6", nr:"6.4", titel:"Proportionalität & Geschwindigkeit", icon:"🚗",
+    beschr:"Proportionalität, km/h, umgekehrte Proportionalität.",
+    lernziele:["Proportionalität lösen","Geschwindigkeit in km/h berechnen","Proportional / umgekehrt erkennen"],
+    gens:[g64_prop, g64_kmh, g64_umgekehrt] },
+  { id:"6.5", klasse:"6", nr:"6.5", titel:"Dezimalrechnen & Überschlagen", icon:"🧮",
+    beschr:"Dezimalzahlen · und :, Zehnerzahlen, überschlagen.",
+    lernziele:["Dezimalzahlen +/−","Dezimalzahlen · und :","Mit Zehner-/Hunderterzahlen rechnen","Ergebnisse überschlagen"],
+    gens:[g65_dezAddSub, g65_dezMal, g65_dezDurch, g65_zehnerMal, g65_ueberschlag] },
+  { id:"6.7", klasse:"6", nr:"6.7", titel:"Flächen & Volumen", icon:"📦",
+    beschr:"Fläche & Umfang, Flächenmasse umwandeln, Volumen.",
+    lernziele:["Fläche & Umfang von Rechtecken","Flächenmasse umwandeln (100er-Schritte)","Volumen von Quadern"],
+    gens:[g67_flaeche, g67_umfang, g67_flaechenUmwandeln, g67_volumen] },
+  { id:"6.8", klasse:"6", nr:"6.8", titel:"Anteile, Prozente & Zahlen", icon:"💯",
+    beschr:"Anteile, das Ganze, Prozente, grosse Zahlen, Primfaktoren.",
+    lernziele:["Anteile bestimmen","Das Ganze berechnen","Prozentwert & Prozentformen","Grosse Zahlen schreiben","Primfaktorzerlegung","Brüche mit versch. Nennern +"],
+    gens:[g68_anteil, g68_ganze, g68_prozentWert, g68_prozentForm, g68_grosseZahl, g68_primfaktor, g68_bruchAddVersch] },
+  { id:"6.9", klasse:"6", nr:"6.9", titel:"Terme, Klammern & Gleichungen", icon:"🟰",
+    beschr:"Punkt vor Strich, Klammern, Gleichungen umstellen.",
+    lernziele:["Punkt vor Strich","Klammern zuerst","Operationszeichen einsetzen","Gleichungen umstellen","Durchschnitt (Datenauswertung)"],
+    gens:[g69_punktStrich, g69_klammer, g69_operationszeichen, g69_umstellen, g69_durchschnitt] },
+  { id:"6.11", klasse:"6", nr:"6.11", titel:"Kombinatorik & Wahrscheinlichkeit", icon:"🎲",
+    beschr:"Anordnungen zählen, Kombinationen, Wahrscheinlichkeit.",
+    lernziele:["Alle Anordnungen bestimmen","Geordnete Auswahl (Medaillen)","Kombinationen zählen","Wahrscheinlichkeit einschätzen"],
+    gens:[g611_permutation, g611_medaillen, g611_kombi, g611_wahrsch] }
+];
+
+/* Schnellzugriff: Thema nach id */
+const THEMA_BY_ID = {};
+THEMEN.forEach(t => THEMA_BY_ID[t.id] = t);
+function themenDerKlasse(k){ return THEMEN.filter(t => t.klasse === k); }
+
+/* ============================================================
+   d) STEUERUNG / ENGINE
+   ============================================================ */
+
+/* Generische Prüfung eines "check"-Objekts */
+function pruefeCheck(check, userStr){
+  if(!check) return false;
+  if(check.art === "zahl")  return gleichZahl(userStr, check.wert, check.tol||1e-6);
+  if(check.art === "bruch") return gleichBruch(userStr, check.z, check.n, {gekuerzt:!!check.gekuerzt});
+  if(check.art === "text"){
+    const u = String(userStr||"").trim().toLowerCase().replace(/\s+/g," ");
+    return check.akzeptiert.some(a => String(a).toLowerCase() === u);
+  }
+  return false;
+}
+
+/* Eindeutige Signatur (für Fehlerliste-Deduplizierung) */
+function aufgabenId(q){
+  const roh = (q.thema||"") + "|" + (q.frageHTML||"").replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();
+  let h = 0; for(let i=0;i<roh.length;i++){ h = (h*31 + roh.charCodeAt(i)) | 0; }
+  return (q.thema||"") + "#" + h;
+}
+
+/* Neue Aufgabe aus einem Thema erzeugen */
+function neueAufgabe(themaId, stufe){
+  const thema = THEMA_BY_ID[themaId];
+  const genIdx = randInt(0, thema.gens.length-1);
+  const q = thema.gens[genIdx](stufe);
+  q.thema = themaId;
+  q.themaTitel = thema.titel;
+  q.stufe = stufe;
+  q._genIdx = genIdx;
+  q.id = aufgabenId(q);
+  return q;
+}
+
+/* Fehlerliste-Verwaltung */
+function merkeFehler(q){
+  const snap = JSON.parse(JSON.stringify(q));
+  delete snap._final; delete snap._genIdx;
+  if(!state.fehler.some(f => f.id === snap.id)){ state.fehler.push(snap); }
+}
+function entferneFehler(q){
+  state.fehler = state.fehler.filter(f => f.id !== q.id);
+}
+
+/* ---------- NAVIGATION ZWISCHEN VIEWS ---------- */
+const VIEWS = ["start","themen","training","ergebnis","lehrer"];
+function zeigeView(name){
+  VIEWS.forEach(v => $("#view-"+v).classList.toggle("aktiv", v===name));
+  window.scrollTo({top:0, behavior:"instant"});
+}
+
+/* ---------- TOAST & MODAL ---------- */
+let toastTimer=null;
+function toast(text){
+  const t=$("#toast"); t.textContent=text; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"), 2600);
+}
+let modalCallback=null;
+function frage(titel, text, onOk){
+  $("#modal-titel").textContent=titel; $("#modal-text").textContent=text;
+  modalCallback=onOk; $("#modal-hg").classList.add("show"); $("#modal-ok").focus();
+}
+function modalSchliessen(){ $("#modal-hg").classList.remove("show"); modalCallback=null; }
+
+/* ============================================================
+   STARTSEITE
+   ============================================================ */
+const ABZEICHEN=[
+  {id:"erste",  icon:"🌟", label:"Erste Aufgabe geschafft"},
+  {id:"serie5", icon:"🔥", label:"5 in Folge richtig"},
+  {id:"fehler", icon:"💪", label:"Fehler verbessert"},
+  {id:"thema",  icon:"✅", label:"Ein Thema abgeschlossen"},
+  {id:"test",   icon:"🏅", label:"Lernstandstest bestanden"}
+];
+
+function rendereStart(){
+  /* Klasse markieren */
+  $$(".klassen-karte").forEach(k => k.setAttribute("aria-pressed", String(k.dataset.klasse===state.klasse)));
+  const badge=$("#klasse-badge");
+  if(state.klasse){ badge.hidden=false; badge.textContent=state.klasse+". Klasse"; }
+  else { badge.hidden=true; }
+  document.body.setAttribute("data-klasse", state.klasse||"5");
+
+  /* Fortschritts-Kennzahlen */
+  const quote = state.bearbeitet ? Math.round(state.richtig/state.bearbeitet*100) : 0;
+  $("#start-fortschritt").innerHTML =
+    '<div class="kennzahlen" style="margin-top:18px">'
+    + kennzahl(state.bearbeitet, "Aufgaben bearbeitet")
+    + kennzahl(quote+"%", "richtig gelöst")
+    + kennzahl('<span class="serie-flamme">🔥 '+state.serie+'</span>', "aktuelle Serie")
+    + kennzahl(state.fehler.length, "offene Fehler")
+    + '</div>';
+
+  /* Modi nur zeigen, wenn Klasse gewählt */
+  $("#start-modi").hidden = !state.klasse;
+
+  /* Stufe-Segment */
+  $$("#stufe-segment button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.stufe===state.stufe)));
+
+  /* Fehler-Anzahl im Modus-Text */
+  $("#fehler-anzahl").textContent = state.fehler.length
+    ? (state.fehler.length + " Aufgabe" + (state.fehler.length>1?"n":"") + " zum Wiederholen")
+    : "Noch keine Fehler – super!";
+
+  /* Abzeichen */
+  $("#abzeichen-reihe").innerHTML = ABZEICHEN.map(a =>
+    '<span class="abzeichen '+(state.abzeichen[a.id]?"erreicht":"")+'"><span class="ac">'+a.icon+'</span>'+a.label+'</span>'
+  ).join("");
+}
+function kennzahl(z, t){ return '<div class="kennzahl"><div class="z num">'+z+'</div><div class="t">'+t+'</div></div>'; }
+
+/* ============================================================
+   THEMENÜBERSICHT
+   ============================================================ */
+function stufeChip(stufe){
+  const punkte={basis:"●", standard:"●●", profi:"●●●"};
+  return '<span class="chip stufe">'+punkte[stufe]+' '+stufe.charAt(0).toUpperCase()+stufe.slice(1)+'</span>';
+}
+function rendereThemen(){
+  const k=state.klasse;
+  $("#themen-titel").textContent = "Themen der "+k+". Klasse";
+  const grid=$("#themen-grid");
+  grid.innerHTML = themenDerKlasse(k).map(t=>{
+    const pt = state.proThema[t.id] || {bearbeitet:0, richtig:0};
+    const ziel = 10;
+    const pct = Math.min(100, Math.round(pt.richtig/ziel*100));
+    const fertig = pt.richtig>=ziel;
+    return '<button class="thema-karte" data-thema="'+t.id+'" aria-label="Thema '+t.titel+' üben">'
+      + '<div class="thema-kopf"><span class="thema-icon" aria-hidden="true">'+t.icon+'</span>'
+        + '<div><div class="thema-titel">'+t.titel+'</div><div class="thema-nr">Bereich '+t.nr+'</div></div></div>'
+      + '<div class="thema-beschr">'+t.beschr+'</div>'
+      + '<div class="thema-fuss">'
+        + '<span class="chip klasse'+k+'">'+k+'. Klasse</span>'
+        + '<span class="progress '+(fertig?"ok":"")+'"><span style="width:'+pct+'%"></span></span>'
+        + '<span class="progress-label">'+(fertig?"✓ ":"")+pt.richtig+'/'+ziel+' richtig</span>'
+      + '</div></button>';
+  }).join("");
+}
+
+/* ============================================================
+   TRAININGS-SITZUNG
+   ============================================================ */
+let session=null;
+let timerInterval=null, timerStart=0;
+
+/* Konfiguration je Modus aufbauen und Sitzung starten */
+function starteSession(config){
+  session = {
+    config: config,
+    liste: config.liste || null,      /* feste Liste (Test/Schnell/Fehler) oder null (endlos) */
+    index: 0,
+    aufgabe: null,
+    richtigAnzahl: 0,
+    gesamtAnzahl: 0,
+    versuche: 0,
+    hinweisGezeigt: false,
+    testAntworten: []
+  };
+  $("#train-titel").textContent = config.titel;
+  $("#train-meta").textContent = config.meta || "";
+  zeigeView("training");
+  /* Timer nur im freiwilligen Zeitmodus (nicht im Test) */
+  const timerEl=$("#train-timer");
+  if(state.zeitmodus && !config.test){ timerEl.hidden=false; starteTimer(); }
+  else { timerEl.hidden=true; stoppeTimer(); }
+  ladeNaechste(true);
+}
+
+function starteTimer(){ timerStart=Date.now(); stoppeTimer(); timerInterval=setInterval(()=>{
+  const s=Math.floor((Date.now()-timerStart)/1000);
+  const mm=String(Math.floor(s/60)).padStart(2,"0"), ss=String(s%60).padStart(2,"0");
+  $("#train-timer").textContent="⏱️ "+mm+":"+ss;
+},1000); }
+function stoppeTimer(){ if(timerInterval){ clearInterval(timerInterval); timerInterval=null; } }
+
+/* Nächste Aufgabe laden (oder Sitzung beenden) */
+function ladeNaechste(erste){
+  session.versuche=0; session.hinweisGezeigt=false;
+  if(session.liste){
+    if(session.index >= session.liste.length){ beendeSitzung(); return; }
+    session.aufgabe = session.liste[session.index];
+  } else {
+    /* endlos: Aufgabe dynamisch erzeugen */
+    session.aufgabe = session.config.naechste();
+  }
+  rendereAufgabe(session.aufgabe);
+  aktualisiereFortschritt();
+}
+
+function aktualisiereFortschritt(){
+  let pct, label;
+  if(session.liste){
+    const n=session.liste.length;
+    pct = Math.round((session.index)/n*100);
+    label = "Aufgabe "+Math.min(session.index+1,n)+" / "+n;
+  } else {
+    const ziel = 10;
+    pct = Math.min(100, Math.round(session.richtigAnzahl/ziel*100));
+    label = session.richtigAnzahl+" richtig · "+session.gesamtAnzahl+" bearbeitet";
+  }
+  $("#train-progressbar").style.width = pct+"%";
+  $("#train-progresslabel").textContent = label;
+}
+
+/* ---------- AUFGABE RENDERN ---------- */
+function rendereAufgabe(q){
+  const test = session.config.test;
+  let eingabeHTML="";
+
+  if(q.typ==="input"){
+    eingabeHTML = '<div class="eingabe-zeile">'
+      + '<input type="text" class="feld num" id="q-input" inputmode="decimal" autocomplete="off" '
+      + 'aria-label="Deine Antwort" placeholder="'+(q.platzhalter||"")+'">'
+      + (q.einheit ? '<span class="einheit">'+q.einheit+'</span>' : '')
+      + '</div>';
+  }
+  else if(q.typ==="multiinput"){
+    let html = q.frageHTML;
+    q.felder.forEach((f,i)=>{
+      const inp = '<input type="text" class="feld klein num" data-feld="'+i+'" inputmode="decimal" autocomplete="off" aria-label="Feld '+(i+1)+'">'
+                + (f.einheit?'<span class="einheit">'+f.einheit+'</span>':'');
+      html = html.replace("{{"+i+"}}", inp);
+    });
+    eingabeHTML = html;
+  }
+  else if(q.typ==="mc"){
+    const marken=["A","B","C","D","E","F"];
+    eingabeHTML = '<div class="mc-liste" role="listbox" aria-label="Antwortmöglichkeiten">'
+      + q.optionen.map((o,i)=>
+          '<button type="button" class="mc-option" data-mc="'+i+'" role="option" aria-pressed="false">'
+          + '<span class="marke" aria-hidden="true">'+marken[i]+'</span><span>'+o+'</span></button>'
+        ).join("")
+      + '</div>';
+  }
+  else if(q.typ==="order"){
+    eingabeHTML = '<div class="ordnen-hint">Klicke die Zahlen der Reihe nach an (klein → gross).</div>'
+      + '<div class="chips-ordnen" id="ord-chips">'
+      + shuffle(q.werte.map((w,i)=>({w:w, anz:q.anzeige[i]}))).map(o=>
+          '<button type="button" class="ord-chip num" data-ord="'+o.w+'">'+o.anz+'</button>'
+        ).join("")
+      + '</div><div class="ord-ziel" id="ord-ziel" aria-live="polite"></div>';
+  }
+
+  /* Frage-Text (bei multiinput steckt die Frage schon in eingabeHTML) */
+  const frageBlock = q.typ==="multiinput" ? "" : '<div class="aufgabe-frage">'+q.frageHTML+'</div>';
+
+  /* Aktionsknöpfe */
+  let aktionen = '<button class="btn primary big" id="btn-pruefen">Prüfen</button>';
+  if(!test){ aktionen += '<button class="btn ghost" id="btn-hinweis">💡 Hinweis</button>'; }
+
+  $("#aufgabe-container").innerHTML =
+      '<div class="aufgabe-karte">'
+    +   '<div class="aufgabe-lernziel">'+(q.themaTitel||"")+(q.lernziel?' · '+q.lernziel:"")+'</div>'
+    +   frageBlock
+    +   (q.typ==="multiinput" ? '<div class="aufgabe-frage">'+eingabeHTML+'</div>' : eingabeHTML)
+    +   '<div class="feedback" id="feedback" role="status" aria-live="polite"></div>'
+    +   '<div id="loesung-slot"></div>'
+    +   '<div class="aktionen">'+aktionen+'</div>'
+    +   '</div>';
+
+  bindeAufgabe(q);
+  /* Fokus auf erstes Eingabefeld */
+  const erstesFeld = $("#q-input") || $("#aufgabe-container input") ;
+  if(erstesFeld) erstesFeld.focus();
+}
+
+/* Event-Handler der aktuellen Aufgabe */
+let mcAuswahl=-1;
+let ordAuswahl=[];
+function bindeAufgabe(q){
+  mcAuswahl=-1; ordAuswahl=[];
+  const cont=$("#aufgabe-container");
+
+  /* Multiple-Choice-Auswahl */
+  cont.querySelectorAll("[data-mc]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      if(btn.classList.contains("richtig")||btn.classList.contains("falsch")) return;
+      mcAuswahl=parseInt(btn.dataset.mc);
+      cont.querySelectorAll("[data-mc]").forEach(b=>b.setAttribute("aria-pressed", String(b===btn)));
+    });
+  });
+
+  /* Ordnen: Chips anklicken */
+  cont.querySelectorAll("[data-ord]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      if(btn.classList.contains("gewaehlt")) return;
+      const w=parseFloat(btn.dataset.ord);
+      ordAuswahl.push(w);
+      btn.classList.add("gewaehlt");
+      const rang=document.createElement("span"); rang.className="rang"; rang.textContent=ordAuswahl.length;
+      btn.appendChild(rang);
+      const ziel=$("#ord-ziel");
+      ziel.innerHTML = ordAuswahl.map(v=>'<span class="fixwert num">'+fmt(v)+'</span>').join(" ");
+    });
+  });
+
+  $("#btn-pruefen").addEventListener("click", pruefen);
+  const bh=$("#btn-hinweis"); if(bh) bh.addEventListener("click", zeigeHinweis);
+}
+
+/* Antwort der aktuellen Aufgabe auslesen und prüfen */
+function leseAntwort(q){
+  if(q.typ==="input"){
+    const val=$("#q-input").value;
+    return { korrekt: pruefeCheck(q.check, val), leer: String(val).trim()==="" };
+  }
+  if(q.typ==="multiinput"){
+    const inputs=$$("#aufgabe-container [data-feld]");
+    let alle=true, leer=false;
+    inputs.forEach((inp,i)=>{
+      if(String(inp.value).trim()==="") leer=true;
+      if(!pruefeCheck(q.felder[i].check, inp.value)) alle=false;
+    });
+    return { korrekt: alle && !leer, leer: leer };
+  }
+  if(q.typ==="mc"){
+    return { korrekt: mcAuswahl===q.richtig, leer: mcAuswahl===-1 };
+  }
+  if(q.typ==="order"){
+    const soll=q.werte.slice().sort((a,b)=>a-b);
+    const korrekt = ordAuswahl.length===soll.length && soll.every((v,i)=>Math.abs(v-ordAuswahl[i])<1e-9);
+    return { korrekt: korrekt, leer: ordAuswahl.length===0 };
+  }
+  return { korrekt:false, leer:true };
+}
+
+/* Visuelles Markieren der Lösung */
+function markiereLoesung(q, korrekt){
+  if(q.typ==="input"){ const el=$("#q-input"); if(el){ el.classList.add(korrekt?"richtig":"falsch"); el.disabled=true; } }
+  else if(q.typ==="multiinput"){ $$("#aufgabe-container [data-feld]").forEach((inp,i)=>{
+      const ok=pruefeCheck(q.felder[i].check, inp.value); inp.classList.add(ok?"richtig":"falsch"); inp.disabled=true; }); }
+  else if(q.typ==="mc"){ $$("#aufgabe-container [data-mc]").forEach((b,i)=>{
+      if(i===q.richtig) b.classList.add("richtig"); else if(i===mcAuswahl) b.classList.add("falsch");
+      b.style.pointerEvents="none"; }); }
+  else if(q.typ==="order"){ $$("#aufgabe-container [data-ord]").forEach(b=>b.style.pointerEvents="none"); }
+}
+
+/* Rückmeldung anzeigen */
+function feedback(art, text){
+  const fb=$("#feedback");
+  const ic = art==="gut" ? "✅" : (art==="fast" ? "🤔" : "ℹ️");
+  fb.className="feedback show "+art;
+  fb.innerHTML='<span class="fic" aria-hidden="true">'+ic+'</span><span>'+text+'</span>';
+}
+
+/* Lösungsweg anzeigen */
+function zeigeLoesungsweg(q){
+  if(!q.loesungHTML) return;
+  $("#loesung-slot").innerHTML =
+    '<details class="loesungsweg" open><summary>Lösungsweg anzeigen</summary>'
+    + '<div class="inhalt">'+q.loesungHTML+'</div></details>';
+}
+
+/* Hinweis-Knopf */
+function zeigeHinweis(){
+  const q=session.aufgabe;
+  session.hinweisGezeigt=true;
+  feedback("info", q.hinweis || "Überlege Schritt für Schritt und schau dir die Zahlen genau an.");
+}
+
+/* ---------- HAUPT-PRÜFLOGIK ---------- */
+let pruefBlockiert=false;
+function pruefen(){
+  if(pruefBlockiert) return;                 /* Mehrfachklick verhindern */
+  const q=session.aufgabe;
+  const btn=$("#btn-pruefen");
+  const ergebnis=leseAntwort(q);
+
+  if(ergebnis.leer){
+    feedback("info","Bitte gib zuerst eine Antwort ein.");
+    return;
+  }
+  pruefBlockiert=true; setTimeout(()=>pruefBlockiert=false, 350);
+
+  /* ----- TESTMODUS: keine Hilfe, direkt weiter ----- */
+  if(session.config.test){
+    session.testAntworten.push({ thema:q.thema, korrekt:ergebnis.korrekt });
+    session.gesamtAnzahl++; if(ergebnis.korrekt) session.richtigAnzahl++;
+    session.index++;
+    ladeNaechste();
+    return;
+  }
+
+  if(ergebnis.korrekt){
+    feedback("gut", zufallLob());
+    markiereLoesung(q, true);
+    finalisiere(q, true);
+    zeigeWeiter(true);
+    btn.disabled=true;
+    return;
+  }
+
+  /* Falsch */
+  session.versuche++;
+  if(session.versuche===1){
+    feedback("fast", zufallFast());
+    /* Eingaben zurücksetzbar lassen -> 2. Versuch möglich */
+    if(q.typ==="mc"){ /* Auswahl aufheben, damit neu gewählt werden kann */
+      $$("#aufgabe-container [data-mc]").forEach(b=>b.setAttribute("aria-pressed","false")); mcAuswahl=-1;
+    }
+    if(q.typ==="order"){ /* Ordnen zurücksetzen */
+      ordAuswahl=[]; $("#ord-ziel").innerHTML="";
+      $$("#aufgabe-container [data-ord]").forEach(b=>{ b.classList.remove("gewaehlt"); const r=b.querySelector(".rang"); if(r) r.remove(); });
+    }
+    /* Button bleibt aktiv für zweiten Versuch */
+    const bh=$("#btn-hinweis"); if(bh){ bh.classList.add("primary"); bh.classList.remove("ghost"); }
+    return;
+  }
+
+  /* Zweiter Fehlversuch: Lösung schrittweise zeigen */
+  feedback("fast", "Kein Problem – so geht die Aufgabe:");
+  markiereLoesung(q, false);
+  zeigeLoesungsweg(q);
+  finalisiere(q, false);
+  zeigeWeiter(false);
+  btn.disabled=true;
+}
+
+/* "Weiter"-Bereich aufbauen */
+function zeigeWeiter(korrekt){
+  stoppeTimer();
+  const q=session.aufgabe;
+  const akt=$("#aufgabe-container .aktionen");
+  let html='<button class="btn primary big" id="btn-weiter">Weiter →</button>';
+  /* freiwilliger Lösungsweg bei richtiger Antwort */
+  if(korrekt && q.loesungHTML && !$(".loesungsweg")){
+    html += '<button class="btn ghost" id="btn-loesung">Lösungsweg zeigen</button>';
+  }
+  /* ähnliche Aufgabe bei endlosen Modi */
+  if(!session.liste && !korrekt){
+    html += '<button class="btn ghost" id="btn-aehnlich">Ähnliche Aufgabe</button>';
+  }
+  akt.innerHTML=html;
+  const bw=$("#btn-weiter"); bw.addEventListener("click", ()=>{ if(!session.liste){ ladeNaechste(); } else { session.index++; ladeNaechste(); } });
+  bw.focus();
+  const bl=$("#btn-loesung"); if(bl) bl.addEventListener("click", ()=>{ zeigeLoesungsweg(q); bl.remove(); });
+  const ba=$("#btn-aehnlich"); if(ba) ba.addEventListener("click", ()=>{
+    session.aufgabe = neueAufgabe(q.thema, q.stufe); session.versuche=0; session.hinweisGezeigt=false;
+    rendereAufgabe(session.aufgabe); aktualisiereFortschritt();
+  });
+  if(startetTimerErneut()) starteTimer();
+}
+function startetTimerErneut(){ return false; }
+
+/* Statistik & Abzeichen nach Abschluss einer Aufgabe */
+function finalisiere(q, korrekt){
+  if(q._final) return; q._final=true;
+  session.gesamtAnzahl++; if(korrekt) session.richtigAnzahl++;
+
+  state.bearbeitet++;
+  const pt = state.proThema[q.thema] || (state.proThema[q.thema]={bearbeitet:0, richtig:0});
+  pt.bearbeitet++;
+
+  if(korrekt){
+    state.richtig++; pt.richtig++;
+    state.serie++; state.bestSerie=Math.max(state.bestSerie, state.serie);
+    if(session.config.modus==="fehler"){ entferneFehler(q); state.fehlerGemeistert++; setzeAbzeichen("fehler"); }
+  } else {
+    state.serie=0;
+    if(session.config.modus!=="fehler"){ merkeFehler(q); }
+  }
+
+  /* zuletzt trainierte Themen */
+  state.zuletztThemen = [q.thema].concat(state.zuletztThemen.filter(t=>t!==q.thema)).slice(0,6);
+
+  /* Abzeichen */
+  if(state.bearbeitet>=1) setzeAbzeichen("erste");
+  if(state.serie>=5) setzeAbzeichen("serie5");
+  if(pt.richtig>=10) setzeAbzeichen("thema");
+
+  speichere();
+  aktualisiereFortschritt();
+}
+function setzeAbzeichen(id){
+  if(state.abzeichen[id]) return;
+  state.abzeichen[id]=true;
+  const a=ABZEICHEN.find(x=>x.id===id);
+  toast(a.icon+"  Abzeichen freigeschaltet: "+a.label);
+}
+
+/* Ende einer festen Sitzung (Test/Schnell/Fehler) */
+function beendeSitzung(){
+  stoppeTimer();
+  if(session.config.test){ zeigeTestErgebnis(); return; }
+  /* Schnell/Fehler: kleine Zusammenfassung */
+  const g=session.gesamtAnzahl, r0=session.richtigAnzahl;
+  toast("Fertig! "+r0+" von "+g+" richtig.");
+  rendereStart(); zeigeView("start");
+}
+
+/* ============================================================
+   MODUS-START (von Startseite)
+   ============================================================ */
+function starteModus(modus){
+  if(!state.klasse){ toast("Bitte wähle zuerst eine Klasse."); return; }
+  const k=state.klasse, stufe=state.stufe;
+  const themen=themenDerKlasse(k);
+
+  if(modus==="thema"){ zeigeView("themen"); rendereThemen(); return; }
+
+  if(modus==="gemischt"){
+    /* aus bereits bearbeiteten Themen, sonst aus allen */
+    let quelle = themen.filter(t=>state.proThema[t.id] && state.proThema[t.id].bearbeitet>0);
+    if(quelle.length===0) quelle=themen;
+    starteSession({ modus:"gemischt", titel:"Gemischtes Training", meta:"Aufgaben aus mehreren Themen",
+      naechste:()=> neueAufgabe(choice(quelle).id, stufe) });
+    return;
+  }
+  if(modus==="schnell"){
+    const liste=[]; for(let i=0;i<5;i++){ liste.push(neueAufgabe(choice(themen).id, stufe)); }
+    starteSession({ modus:"schnell", titel:"Schnelltraining", meta:"5 zufällige Aufgaben", liste:liste });
+    return;
+  }
+  if(modus==="herausforderung"){
+    starteSession({ modus:"herausforderung", titel:"Herausforderung 🏆", meta:"Kniffligere Aufgaben (Profi-Stufe)",
+      naechste:()=> neueAufgabe(choice(themen).id, "profi") });
+    return;
+  }
+  if(modus==="fehler"){
+    if(state.fehler.length===0){ toast("Du hast momentan keine Fehler zum Üben. Weiter so!"); return; }
+    const liste = state.fehler.map(f=>JSON.parse(JSON.stringify(f)));
+    liste.forEach(q=>{ delete q._final; });
+    starteSession({ modus:"fehler", titel:"Meine Fehler üben 🔁", meta:"Wiederhole deine falsch gelösten Aufgaben", liste:liste });
+    return;
+  }
+  if(modus==="test"){
+    const liste=[]; const themenMix=shuffle(themen);
+    for(let i=0;i<10;i++){ liste.push(neueAufgabe(themenMix[i%themenMix.length].id, stufe)); }
+    starteSession({ modus:"test", test:true, titel:"Lernstandstest 📝", meta:"10 Aufgaben · Auswertung am Schluss", liste:liste });
+    return;
+  }
+}
+
+/* Thema-Training starten (aus Themenübersicht) */
+function starteThemaTraining(themaId){
+  const stufe=state.stufe;
+  const t=THEMA_BY_ID[themaId];
+  starteSession({ modus:"thema", themaId:themaId, titel:t.icon+" "+t.titel, meta:"Bereich "+t.nr,
+    naechste:()=> neueAufgabe(themaId, stufe) });
+}
+
+/* ============================================================
+   TEST-AUSWERTUNG
+   ============================================================ */
+function zeigeTestErgebnis(){
+  const antworten=session.testAntworten;
+  const max=antworten.length, punkte=antworten.filter(a=>a.korrekt).length;
+  const prozent=Math.round(punkte/max*100);
+
+  /* Ergebnis speichern */
+  state.tests.push({ datum:new Date().toISOString().slice(0,10), klasse:state.klasse, prozent:prozent, punkte:punkte, max:max });
+  if(state.tests.length>20) state.tests=state.tests.slice(-20);
+  if(prozent>=60) setzeAbzeichen("test");
+  speichere();
+
+  /* Ring & Texte */
+  const ring=$("#ergebnis-ring");
+  ring.style.setProperty("--p", prozent+"%");
+  $("#ergebnis-prozent").textContent=prozent+"%";
+  $("#ergebnis-punkte").textContent=punkte+" / "+max+" Punkte";
+  let bewertung;
+  if(prozent>=90) bewertung="Ausgezeichnet! Du beherrschst das sehr sicher. 🌟";
+  else if(prozent>=60) bewertung="Gut gemacht – Test bestanden! 🏅";
+  else bewertung="Das wird noch. Übe die vorgeschlagenen Themen und versuch es erneut. 💪";
+  $("#ergebnis-text").textContent=bewertung;
+
+  /* Themen zum Weiterüben (dort, wo Fehler passierten) */
+  const fehlThemen={};
+  antworten.forEach(a=>{ if(!a.korrekt){ fehlThemen[a.thema]=(fehlThemen[a.thema]||0)+1; } });
+  const sortiert=Object.keys(fehlThemen).sort((a,b)=>fehlThemen[b]-fehlThemen[a]);
+  const vor=$("#ergebnis-vorschlag");
+  if(sortiert.length){
+    vor.innerHTML='<p class="hinweistext">Übe am besten weiter bei:</p><div class="themen-grid" style="margin-top:6px">'
+      + sortiert.map(id=>{ const t=THEMA_BY_ID[id];
+          return '<button class="thema-karte" data-thema="'+id+'"><div class="thema-kopf"><span class="thema-icon">'+t.icon+'</span><div class="thema-titel">'+t.titel+'</div></div></button>';
+        }).join("") + '</div>';
+    vor.querySelectorAll("[data-thema]").forEach(b=>b.addEventListener("click",()=>starteThemaTraining(b.dataset.thema)));
+  } else {
+    vor.innerHTML='<p class="hinweistext">Alles richtig – du kannst dir ein neues Thema aussuchen!</p>';
+  }
+  zeigeView("ergebnis");
+  rendereStart();
+}
+
+/* ============================================================
+   LEHRPERSONENBEREICH
+   ============================================================ */
+function rendereLehrer(){
+  const quote = state.bearbeitet ? Math.round(state.richtig/state.bearbeitet*100) : 0;
+
+  /* Häufige Fehlerthemen (aus offener Fehlerliste) */
+  const fehlZaehler={};
+  state.fehler.forEach(f=>{ fehlZaehler[f.thema]=(fehlZaehler[f.thema]||0)+1; });
+  const fehlSort=Object.keys(fehlZaehler).sort((a,b)=>fehlZaehler[b]-fehlZaehler[a]);
+
+  /* Übersicht Themen (beide Klassen) */
+  function themenTabelle(k){
+    return '<table class="lp"><thead><tr><th>Bereich</th><th>Thema</th><th>Lernziele</th><th class="zahl">Aufgabentypen</th><th>Stufen</th></tr></thead><tbody>'
+      + themenDerKlasse(k).map(t=>
+          '<tr><td>'+t.nr+'</td><td><strong>'+t.icon+' '+t.titel+'</strong></td>'
+          + '<td>'+t.lernziele.map(l=>"• "+l).join("<br>")+'</td>'
+          + '<td class="zahl">'+t.gens.length+'</td>'
+          + '<td>Basis · Standard · Profi</td></tr>'
+        ).join("")
+      + '</tbody></table>';
+  }
+
+  /* lokale Auswertung dieses Geräts */
+  const proThemaRows = Object.keys(state.proThema).map(id=>{
+    const p=state.proThema[id]; const t=THEMA_BY_ID[id]; if(!t) return "";
+    const q = p.bearbeitet? Math.round(p.richtig/p.bearbeitet*100):0;
+    return '<tr><td>'+t.icon+' '+t.titel+'</td><td class="zahl">'+p.bearbeitet+'</td><td class="zahl">'+p.richtig+'</td><td class="zahl">'+q+'%</td></tr>';
+  }).join("");
+
+  const testRows = state.tests.slice().reverse().map(t=>
+    '<tr><td>'+t.datum+'</td><td>'+t.klasse+'. Klasse</td><td class="zahl">'+t.punkte+'/'+t.max+'</td><td class="zahl">'+t.prozent+'%</td></tr>'
+  ).join("") || '<tr><td colspan="4" class="hinweistext">Noch keine Tests absolviert.</td></tr>';
+
+  const zuletzt = state.zuletztThemen.map(id=>THEMA_BY_ID[id]).filter(Boolean)
+    .map(t=>'<span class="chip">'+t.icon+' '+t.titel+'</span>').join(" ") || '<span class="hinweistext">–</span>';
+
+  const fehlThemenHTML = fehlSort.length
+    ? fehlSort.map(id=>{ const t=THEMA_BY_ID[id]; return '<tr><td>'+t.icon+' '+t.titel+'</td><td class="zahl">'+fehlZaehler[id]+'</td></tr>'; }).join("")
+    : '<tr><td colspan="2" class="hinweistext">Keine offenen Fehler.</td></tr>';
+
+  $("#lehrer-inhalt").innerHTML =
+    /* Lokale Auswertung */
+    '<div class="card lp-block"><h2>Lokale Auswertung (dieses Gerät)</h2>'
+    + '<div class="kennzahlen">'
+      + kennzahl(state.bearbeitet,"bearbeitete Aufgaben")
+      + kennzahl(quote+"%","Erfolgsquote")
+      + kennzahl(state.fehler.length,"offene Fehler")
+      + kennzahl(state.fehlerGemeistert,"verbesserte Fehler")
+      + kennzahl(state.bestSerie,"längste Serie")
+    + '</div>'
+    + '<h3 style="margin-top:20px">Fortschritt pro Thema</h3>'
+    + '<table class="lp"><thead><tr><th>Thema</th><th class="zahl">bearbeitet</th><th class="zahl">richtig</th><th class="zahl">Quote</th></tr></thead><tbody>'
+      + (proThemaRows || '<tr><td colspan="4" class="hinweistext">Noch keine Aufgaben bearbeitet.</td></tr>')
+    + '</tbody></table>'
+    + '<h3 style="margin-top:20px">Häufige Fehlerthemen</h3>'
+    + '<table class="lp"><thead><tr><th>Thema</th><th class="zahl">offene Fehler</th></tr></thead><tbody>'+fehlThemenHTML+'</tbody></table>'
+    + '<h3 style="margin-top:20px">Lernstandstests</h3>'
+    + '<table class="lp"><thead><tr><th>Datum</th><th>Klasse</th><th class="zahl">Punkte</th><th class="zahl">Prozent</th></tr></thead><tbody>'+testRows+'</tbody></table>'
+    + '<h3 style="margin-top:20px">Zuletzt trainierte Themen</h3><div class="abzeichen-reihe">'+zuletzt+'</div>'
+    + '</div>'
+
+    /* Inhalte / Themen */
+    + '<div class="card lp-block"><h2>Enthaltene Themen – 5. Klasse</h2>'+themenTabelle("5")+'</div>'
+    + '<div class="card lp-block"><h2>Enthaltene Themen – 6. Klasse</h2>'+themenTabelle("6")+'</div>'
+
+    /* Modi-Erklärung */
+    + '<div class="card lp-block"><h2>Trainingsmodi</h2><table class="lp"><tbody>'
+      + trRow("📚 Training starten","Üben nach frei gewähltem Thema – endlos, mit Hinweisen und Lösungswegen.")
+      + trRow("🎯 Gemischtes Training","Aufgaben aus mehreren bereits bearbeiteten Themen gemischt.")
+      + trRow("⚡ Schnelltraining","Fünf zufällige Aufgaben aus allen Themen der Klasse.")
+      + trRow("🔁 Meine Fehler üben","Falsch gelöste Aufgaben werden gespeichert und erneut angeboten. Erst nach erneutem richtigem Lösen gilt eine Aufgabe als gemeistert.")
+      + trRow("📝 Lernstand testen","Zehn Aufgaben ohne Hilfen; Auswertung mit Punkten, Prozent und Übungsvorschlägen am Schluss.")
+      + trRow("🏆 Herausforderung","Anspruchsvollere Aufgaben auf Profi-Stufe – freiwillig für leistungsstarke Kinder.")
+    + '</tbody></table>'
+    + '<h3 style="margin-top:18px">Schwierigkeitsstufen</h3><table class="lp"><tbody>'
+      + trRow("● Basis","Einfache Zahlen, wenige Rechenschritte, Hilfen verfügbar.")
+      + trRow("●● Standard","Reguläres Niveau der Klassenstufe, verschiedene Aufgabentypen.")
+      + trRow("●●● Profi","Grössere Zahlen, komplexere Verknüpfungen, Transferaufgaben.")
+    + '</tbody></table></div>';
+}
+function trRow(a,b){ return '<tr><td style="white-space:nowrap"><strong>'+a+'</strong></td><td>'+b+'</td></tr>'; }
+
+/* ============================================================
+   INITIALISIERUNG & GLOBALE EVENTS
+   ============================================================ */
+function init(){
+  /* Klasse wählen */
+  $$(".klassen-karte").forEach(k=>k.addEventListener("click",()=>{
+    state.klasse=k.dataset.klasse; speichere(); rendereStart();
+    $("#start-modi").scrollIntoView({behavior:"smooth", block:"start"});
+  }));
+
+  /* Stufe wählen */
+  $$("#stufe-segment button").forEach(b=>b.addEventListener("click",()=>{
+    state.stufe=b.dataset.stufe; speichere();
+    $$("#stufe-segment button").forEach(x=>x.setAttribute("aria-pressed", String(x===b)));
+  }));
+
+  /* Zeitmodus-Umschalter (freiwillig, standardmässig aus) – dynamisch einfügen */
+  const switchZeile=$("#start-modi .switch-zeile");
+  const zeitBtn=document.createElement("button");
+  zeitBtn.className="btn ghost"; zeitBtn.id="btn-zeit"; zeitBtn.style.marginLeft="auto";
+  const setZeitLabel=()=> zeitBtn.innerHTML = "⏱️ Zeitmodus: <strong>"+(state.zeitmodus?"an":"aus")+"</strong>";
+  setZeitLabel();
+  zeitBtn.setAttribute("aria-pressed", String(state.zeitmodus));
+  zeitBtn.addEventListener("click",()=>{ state.zeitmodus=!state.zeitmodus; speichere(); setZeitLabel(); zeitBtn.setAttribute("aria-pressed",String(state.zeitmodus)); toast("Zeitmodus "+(state.zeitmodus?"eingeschaltet":"ausgeschaltet")); });
+  switchZeile.appendChild(zeitBtn);
+
+  /* Modus-Kacheln */
+  $$(".modus-kachel").forEach(m=>m.addEventListener("click",()=>starteModus(m.dataset.modus)));
+
+  /* Themenkarten (Delegation) */
+  $("#themen-grid").addEventListener("click",e=>{
+    const karte=e.target.closest("[data-thema]"); if(karte) starteThemaTraining(karte.dataset.thema);
+  });
+
+  /* Navigationsknöpfe */
+  $("#btn-home").addEventListener("click", ()=>{ rendereStart(); zeigeView("start"); });
+  $$("[data-nav]").forEach(b=>b.addEventListener("click",()=>{ const z=b.dataset.nav; rendereStart(); zeigeView(z); }));
+  $("#btn-train-zurueck").addEventListener("click",()=>{ stoppeTimer(); rendereStart(); zeigeView("start"); });
+  $("#btn-ergebnis-weiter").addEventListener("click",()=>{ rendereStart(); zeigeView("start"); });
+
+  /* Lehrpersonen */
+  $("#btn-lehrer").addEventListener("click",()=>{ rendereLehrer(); zeigeView("lehrer"); });
+  $("#btn-drucken").addEventListener("click",()=>window.print());
+
+  /* Fortschritt zurücksetzen (mit Sicherheitsabfrage) */
+  $("#btn-reset").addEventListener("click",()=>{
+    frage("Lernfortschritt zurücksetzen?",
+      "Alle gespeicherten Daten auf diesem Gerät (Fortschritt, Fehler, Tests, Abzeichen) werden gelöscht. Das kann nicht rückgängig gemacht werden.",
+      ()=>{ const alteKlasse=state.klasse; localStorage.removeItem(STORAGE_KEY); state=standardState(); state.klasse=alteKlasse; speichere(); rendereStart(); toast("Lernfortschritt wurde zurückgesetzt."); });
+  });
+
+  /* Modal-Knöpfe */
+  $("#modal-ok").addEventListener("click",()=>{ const cb=modalCallback; modalSchliessen(); if(cb) cb(); });
+  $("#modal-abbrechen").addEventListener("click", modalSchliessen);
+  $("#modal-hg").addEventListener("click",e=>{ if(e.target===$("#modal-hg")) modalSchliessen(); });
+
+  /* Tastatur: Enter = Prüfen/Weiter, Escape = Fenster schliessen */
+  document.addEventListener("keydown",e=>{
+    if(e.key==="Escape"){ if($("#modal-hg").classList.contains("show")) modalSchliessen(); return; }
+    if(e.key==="Enter"){
+      if($("#modal-hg").classList.contains("show")){ $("#modal-ok").click(); return; }
+      if($("#view-training").classList.contains("aktiv")){
+        const bw=$("#btn-weiter"); const bp=$("#btn-pruefen");
+        if(bw && !bw.disabled){ e.preventDefault(); bw.click(); }
+        else if(bp && !bp.disabled){ e.preventDefault(); bp.click(); }
+      }
+    }
+  });
+
+  rendereStart();
+}
+
+document.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="de-CH">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>Demo – Mathe Gym</title>
+<link rel="stylesheet" href="src/styles/tokens.css">
+<link rel="stylesheet" href="src/styles/basis.css">
+<link rel="stylesheet" href="src/styles/komponenten.css">
+</head>
+<body>
+
+<header class="kopf">
+  <button type="button" class="marke" id="knopf-start" style="border:0;background:none;cursor:pointer">
+    <span class="zeichen" aria-hidden="true">MG</span>
+    <span>Mathe Gym</span>
+  </button>
+  <div class="rechts">
+    <span class="chip">Demo-Ansicht</span>
+  </div>
+</header>
+<div class="klassenband"></div>
+
+<main class="inhalt">
+
+  <div class="meldung info" style="margin-bottom:var(--a5)">
+    <div>
+      <strong>Dies ist eine Vorschau ohne Anmeldung.</strong><br>
+      Aufgaben, Eingaben und Rückmeldungen sind identisch mit der echten Plattform.
+      Der Fortschritt wird jedoch nicht gespeichert und ist nach dem Schliessen des Tabs weg.
+      «Meine Fehler üben» und der Lehrpersonenbereich brauchen ein Konto und sind hier nicht verfügbar.
+    </div>
+  </div>
+
+  <section class="ansicht aktiv" id="ansicht-start">
+    <h1>Womit möchtest du üben?</h1>
+
+    <div class="kennzahlen" id="kennzahlen" style="margin-bottom:var(--a5)"></div>
+
+    <div class="karte schmal">
+      <h2>Klassenstufe</h2>
+      <p class="hilfetext" style="margin-top:0">In der echten Plattform ergibt sie sich aus dem Konto des Kindes.</p>
+      <div class="knopfzeile" id="klassenwahl-demo"></div>
+    </div>
+
+    <div class="karte schmal">
+      <h2>Schwierigkeit</h2>
+      <div class="knopfzeile" id="stufenwahl"></div>
+      <p class="hilfetext" id="stufen-erklaerung"></p>
+      <div class="knopfzeile" id="zeitmodus-zeile" style="margin-top:var(--a3)"></div>
+    </div>
+
+    <h2>Trainingsarten</h2>
+    <div class="modi" id="modi"></div>
+
+    <div class="karte" style="margin-top:var(--a5)">
+      <h2>Abzeichen</h2>
+      <div class="abzeichen-reihe" id="abzeichen"></div>
+    </div>
+  </section>
+
+  <section class="ansicht" id="ansicht-themen">
+    <div class="knopfzeile" style="margin-bottom:var(--a4)">
+      <button type="button" class="knopf leise" id="themen-zurueck">← Zurück</button>
+    </div>
+    <h1 id="themen-titel">Themen</h1>
+    <div class="knopfzeile" id="stufen-umschalter" style="margin-bottom:var(--a4)"></div>
+    <div class="themen-gitter" id="themen-gitter"></div>
+  </section>
+
+  <section class="ansicht" id="ansicht-training">
+    <div id="training-bereich"></div>
+  </section>
+
+  <section class="ansicht" id="ansicht-ergebnis">
+    <div class="karte" style="text-align:center">
+      <h1>Dein Ergebnis</h1>
+      <div class="ring" id="ergebnis-ring" style="--p:0">
+        <div class="innen">
+          <div>
+            <div class="prozent" id="ergebnis-prozent">0%</div>
+            <div class="punkte" id="ergebnis-punkte"></div>
+          </div>
+        </div>
+      </div>
+      <p id="ergebnis-text"></p>
+    </div>
+    <div class="karte" id="ergebnis-vorschlag"></div>
+    <button type="button" class="knopf haupt gross" id="ergebnis-weiter">Zur Startseite</button>
+  </section>
+
+</main>
+
+<div class="streifen" id="streifen" role="status" aria-live="polite"></div>
+
+<script type="module" src="src/demo.js"></script>
+</body>
+</html>

@@ -1,0 +1,169 @@
+/* Mathe Gym – Grundlayout */
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--schrift);
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--grund);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 { margin: 0 0 var(--a3); line-height: 1.25; font-weight: 700; }
+h1 { font-size: 1.75rem; }
+h2 { font-size: 1.3rem; }
+h3 { font-size: 1.05rem; }
+p  { margin: 0 0 var(--a3); }
+
+.zahl, .rechnung, input.feld { font-variant-numeric: tabular-nums; }
+
+/* ---------- Kopfzeile ---------- */
+.kopf {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; gap: var(--a3);
+  padding: var(--a3) var(--a4);
+  background: var(--flaeche);
+  border-bottom: 1px solid var(--linie);
+}
+.kopf .marke {
+  display: flex; align-items: center; gap: var(--a2);
+  font-weight: 800; letter-spacing: -.01em; color: var(--blau);
+  font-size: 1.05rem; text-decoration: none;
+}
+.kopf .marke .zeichen {
+  width: 32px; height: 32px; border-radius: 9px;
+  background: var(--blau); color: #fff;
+  display: grid; place-items: center; font-size: .95rem; font-weight: 800;
+}
+.kopf .rechts { margin-left: auto; display: flex; align-items: center; gap: var(--a2); }
+
+.klassenband { height: 4px; background: var(--stufe); }
+
+/* ---------- Inhalt ---------- */
+.inhalt { max-width: 900px; margin: 0 auto; padding: var(--a5) var(--a4) var(--a7); }
+.inhalt.breit { max-width: 1280px; }
+
+.karte {
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-radius: var(--radius);
+  box-shadow: var(--schatten);
+  padding: var(--a5);
+  margin-bottom: var(--a4);
+}
+.karte.schmal { padding: var(--a4); }
+
+/* ---------- Schaltflächen ---------- */
+.knopf {
+  appearance: none; -webkit-appearance: none;
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--a2);
+  min-height: var(--touch); padding: 0 var(--a5);
+  border-radius: var(--radius-klein);
+  border: 1px solid var(--linie-stark);
+  background: var(--flaeche); color: var(--text);
+  font: inherit; font-weight: 600; cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+  touch-action: manipulation;
+}
+.knopf:hover { background: var(--flaeche-2); }
+.knopf:active { background: var(--linie); }
+.knopf.haupt { background: var(--blau); border-color: var(--blau); color: #fff; }
+.knopf.haupt:hover { background: var(--blau-dunkel); border-color: var(--blau-dunkel); }
+.knopf.haupt:active { background: var(--blau-tief); }
+.knopf.gross { min-height: var(--touch-gross); font-size: 1.05rem; padding: 0 var(--a6); }
+.knopf.voll { width: 100%; }
+.knopf.leise { border-color: transparent; background: transparent; color: var(--blau); }
+.knopf.leise:hover { background: var(--blau-hell); }
+.knopf.gefahr { color: #96311B; border-color: #E6C2B8; }
+.knopf.gefahr:hover { background: #FBEEEA; }
+.knopf[disabled] { opacity: .5; cursor: not-allowed; }
+
+.knopfzeile { display: flex; flex-wrap: wrap; gap: var(--a3); align-items: center; }
+
+/* ---------- Fokus: immer deutlich sichtbar ---------- */
+:focus { outline: none; }
+:focus-visible {
+  outline: 3px solid var(--blau);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ---------- Formulare ---------- */
+label { display: block; font-weight: 600; margin-bottom: var(--a1); font-size: .92rem; }
+input[type="text"], input[type="password"], select {
+  width: 100%; min-height: var(--touch);
+  padding: 0 var(--a3);
+  font: inherit; font-size: 17px;          /* verhindert Auto-Zoom in Safari */
+  color: var(--text); background: var(--flaeche);
+  border: 2px solid var(--linie-stark); border-radius: var(--radius-klein);
+}
+input:focus-visible, select:focus-visible { border-color: var(--blau); }
+.feldgruppe { margin-bottom: var(--a4); }
+.hilfetext { font-size: .85rem; color: var(--text-leise); margin-top: var(--a1); }
+
+/* ---------- Chips und Etiketten ---------- */
+.chip {
+  display: inline-flex; align-items: center; gap: var(--a1);
+  padding: 4px 10px; border-radius: var(--radius-rund);
+  background: var(--flaeche-2); border: 1px solid var(--linie);
+  font-size: .78rem; font-weight: 700; color: var(--text-leise);
+}
+.chip.stufe5 { background: var(--k5-hell); border-color: transparent; color: #1C6B5A; }
+.chip.stufe6 { background: var(--k6-hell); border-color: transparent; color: #3F45A0; }
+.chip.blau  { background: var(--blau-hell); border-color: transparent; color: var(--blau-dunkel); }
+
+/* ---------- Meldungen ---------- */
+.meldung {
+  display: flex; gap: var(--a3); align-items: flex-start;
+  padding: var(--a3) var(--a4); border-radius: var(--radius-klein);
+  border: 1px solid var(--linie); background: var(--flaeche-2);
+  margin-bottom: var(--a4);
+}
+.meldung.fehler { background: #FBEEEA; border-color: #E6C2B8; color: #7A2814; }
+.meldung.info   { background: var(--info-flaeche); border-color: var(--blau-linie); color: var(--blau-tief); }
+.meldung.gut    { background: var(--gut-flaeche); border-color: var(--gut-linie); color: var(--gut); }
+
+/* ---------- Ladeanzeige ---------- */
+.laedt { display: flex; align-items: center; gap: var(--a3); color: var(--text-leise); padding: var(--a5); }
+.spinner {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 3px solid var(--linie); border-top-color: var(--blau);
+  animation: dreh .8s linear infinite;
+}
+@keyframes dreh { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
+
+/* ---------- Hinweisstreifen ---------- */
+.streifen {
+  position: fixed; left: 50%; bottom: var(--a4); transform: translateX(-50%) translateY(140%);
+  background: var(--text); color: #fff; padding: var(--a3) var(--a5);
+  border-radius: var(--radius-rund); box-shadow: var(--schatten-hoch);
+  font-weight: 600; font-size: .92rem; z-index: 60; max-width: 90vw; text-align: center;
+  transition: transform .2s ease;
+}
+.streifen.sichtbar { transform: translateX(-50%) translateY(0); }
+
+/* ---------- Sicherheitsabfrage ---------- */
+.abfrage-hg {
+  position: fixed; inset: 0; background: rgba(22, 32, 43, .45);
+  display: none; align-items: center; justify-content: center; padding: var(--a4); z-index: 70;
+}
+.abfrage-hg.offen { display: flex; }
+.abfrage {
+  background: var(--flaeche); border-radius: var(--radius); padding: var(--a5);
+  max-width: 460px; width: 100%; box-shadow: var(--schatten-hoch);
+}
+
+/* ---------- Nur für Screenreader ---------- */
+.nur-sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.ansicht { display: none; }
+.ansicht.aktiv { display: block; }

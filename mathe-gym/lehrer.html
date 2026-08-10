@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="de-CH">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Lehrpersonenbereich – Mathe Gym</title>
+<link rel="stylesheet" href="src/styles/tokens.css">
+<link rel="stylesheet" href="src/styles/basis.css">
+<link rel="stylesheet" href="src/styles/komponenten.css">
+<link rel="stylesheet" href="src/styles/druck.css">
+</head>
+<body>
+
+<header class="kopf">
+  <span class="marke">
+    <span class="zeichen" aria-hidden="true">MG</span>
+    <span>Mathe Gym <span style="font-weight:600;color:var(--text-leise)">· Lehrpersonen</span></span>
+  </span>
+  <div class="rechts">
+    <span class="chip" id="lp-name"></span>
+    <button type="button" class="knopf leise" id="knopf-abmelden">Abmelden</button>
+  </div>
+</header>
+<div class="klassenband" style="background:var(--blau)"></div>
+
+<main class="inhalt breit">
+
+  <div class="druck-kopf">
+    <strong>Mathe Gym – Auswertung</strong>
+    <span id="druck-datum"></span>
+  </div>
+
+  <div class="meldung fehler" id="meldung" style="display:none" role="alert"></div>
+
+  <div id="filterleiste-klasse">
+    <div class="knopfzeile filterleiste" style="margin-bottom:var(--a3)">
+      <label for="klassenwahl">Klasse</label>
+      <select id="klassenwahl" style="width:auto;min-width:170px"></select>
+
+      <label for="zeitraumwahl">Zeitraum</label>
+      <select id="zeitraumwahl" style="width:auto;min-width:170px"></select>
+
+      <label for="themawahl">Thema</label>
+      <select id="themawahl" style="width:auto;min-width:200px"></select>
+    </div>
+
+    <div class="knopfzeile filterleiste" style="margin-bottom:var(--a5)">
+      <input type="text" id="suche" placeholder="Benutzername suchen" style="width:auto;min-width:220px" autocomplete="off">
+      <button type="button" class="knopf" id="knopf-drucken">Drucken</button>
+      <button type="button" class="knopf" id="knopf-export">Als CSV exportieren</button>
+      <button type="button" class="knopf" id="knopf-einstellungen">Klasseneinstellungen</button>
+      <button type="button" class="knopf haupt" id="knopf-neues-konto">Neues Schülerkonto</button>
+    </div>
+
+    <div id="nur-lesen-hinweis" class="meldung info" style="display:none">
+      Diese Klasse betreuen Sie nicht. Sie sehen alle Zahlen, können hier aber nichts ändern.
+    </div>
+  </div>
+
+  <!-- Klassenansicht -->
+  <section class="ansicht aktiv" id="ansicht-klasse">
+
+    <section class="karte">
+      <h2>Überblick <span class="chip blau" id="zeitraum-anzeige"></span></h2>
+      <div class="kennzahlen" id="lp-kennzahlen"></div>
+    </section>
+
+    <section class="karte">
+      <h2>Verteilung nach Schwierigkeitsstufe</h2>
+      <div id="stufen-verteilung"></div>
+    </section>
+
+    <section class="karte">
+      <h2>Themen mit Unterstützungsbedarf</h2>
+      <p class="hilfetext">Sortiert nach der tiefsten Erfolgsquote. Farbig hinterlegt: unter 60 Prozent bei mindestens zehn Aufgaben.</p>
+      <div class="tabellen-rahmen">
+        <table class="tabelle" id="tabelle-themen">
+          <thead><tr>
+            <th>Thema</th><th class="zahl">bearbeitet</th><th class="zahl">richtig</th>
+            <th class="zahl">Quote</th><th class="zahl">Kinder</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="karte">
+      <h2>Kinder der Klasse</h2>
+      <p class="hilfetext">Auf den Benutzernamen tippen öffnet die Detailansicht mit Verlauf.</p>
+      <div class="tabellen-rahmen">
+        <table class="tabelle" id="tabelle-kinder">
+          <thead><tr>
+            <th>Benutzername</th><th>letzte Aktivität</th>
+            <th class="zahl">Aufgaben</th><th class="zahl">Quote</th>
+            <th class="zahl">offene Fehler</th><th class="zahl">verbessert</th>
+            <th class="zahl">letzter Test</th><th>Verwaltung</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+  </section>
+
+  <!-- Detailansicht eines Kindes -->
+  <section class="ansicht" id="ansicht-detail">
+    <div id="detail-bereich"></div>
+  </section>
+
+</main>
+
+<div class="abfrage-hg" id="abfrage-hg" role="dialog" aria-modal="true" aria-labelledby="abfrage-titel">
+  <div class="abfrage">
+    <h2 id="abfrage-titel"></h2>
+    <div id="abfrage-inhalt"></div>
+    <div class="knopfzeile" style="margin-top:var(--a4);justify-content:flex-end">
+      <button type="button" class="knopf" id="abfrage-abbrechen">Abbrechen</button>
+      <button type="button" class="knopf haupt" id="abfrage-ok">Bestätigen</button>
+    </div>
+  </div>
+</div>
+
+<div class="streifen" id="streifen" role="status" aria-live="polite"></div>
+
+<script type="module" src="src/lehrer.js"></script>
+</body>
+</html>
