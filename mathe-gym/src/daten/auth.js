@@ -50,7 +50,7 @@ export async function profil() {
 
   const { data, error } = await db
     .from('profile')
-    .select('id, rolle, benutzername, anzeigename, aktiv, klasse_id, klassen(id, name, code, stufe)')
+    .select('id, rolle, benutzername, anzeigename, aktiv, klasse_id, klassen!profile_klasse_id_fkey(id, name, code, stufe)')
     .eq('id', sitzung.session.user.id)
     .maybeSingle();
 
